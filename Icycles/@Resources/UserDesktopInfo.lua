@@ -73,7 +73,7 @@ function SaveDesktopInfo()
 
   -- Build file path
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local filePath = skinPath .. "..\\Data\\UserDesktopData.ldb"
+  local filePath = skinPath .. "Data\\UserDesktopData.ldb"
 
   -- Write to temp file first (atomic write)
   local tempPath = filePath .. ".tmp"
@@ -138,7 +138,7 @@ end
 -- UTILITY: Error logging
 -- ========================================
 function LogError(message)
-  local logPath = SKIN:GetVariable("CURRENTPATH") .. "..\\Logs\\errors.log"
+  local logPath = SKIN:GetVariable("CURRENTPATH") .. "Logs\\errors.log"
   local file = io.open(logPath, "a")
   if file then
     file:write(string.format("[%s] UserDesktopInfo: %s\n", os.date("%Y-%m-%d %H:%M:%S"), message))

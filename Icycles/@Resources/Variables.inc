@@ -56,6 +56,9 @@ Spacing4=34
 Spacing5=55
 
 ; === LAYOUT ===
+; General
+Padding=16
+
 ; Drawer Widgets
 DrawerWidth=280
 DrawerIconSize=48
