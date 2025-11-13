@@ -33,7 +33,7 @@ function LoadAllCategories()
   loadedCategories = {}
 
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local masterPath = skinPath .. "..\\Data\\Categories.ldb"
+  local masterPath = skinPath .. "Data\\Categories.ldb"
 
   -- Load master index
   local masterData = LoadDataFile(masterPath)
@@ -45,7 +45,7 @@ function LoadAllCategories()
 
   -- Load each category file
   for _, categoryName in ipairs(masterData.categories) do
-    local catPath = skinPath .. "..\\CatData\\" .. categoryName .. ".ldb"
+    local catPath = skinPath .. "CatData\\" .. categoryName .. ".ldb"
     local catData = LoadDataFile(catPath)
 
     if catData then
@@ -110,7 +110,7 @@ function DeleteCategory(categoryName)
 
   -- Delete physical file
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local catPath = skinPath .. "..\\CatData\\" .. categoryName .. ".ldb"
+  local catPath = skinPath .. "CatData\\" .. categoryName .. ".ldb"
   os.remove(catPath)
 
   print("Configurator: Deleted category: " .. categoryName)
@@ -211,7 +211,7 @@ function AddItemToCategory(itemName, categoryName)
 
   -- Load item data from ListedDesktopItems
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local itemsPath = skinPath .. "..\\Data\\ListedDesktopItems.lua"
+  local itemsPath = skinPath .. "Data\\ListedDesktopItems.lua"
   local allItems = LoadDataFile(itemsPath)
 
   if not allItems then
@@ -417,7 +417,7 @@ end
 
 function SaveAllCategories()
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local catDataPath = skinPath .. "..\\CatData\\"
+  local catDataPath = skinPath .. "CatData\\"
 
   local categoryList = {}
   local orderList = {}
@@ -461,7 +461,7 @@ function SaveAllCategories()
     version = "1.0.0"
   }
 
-  local masterPath = skinPath .. "..\\Data\\Categories.ldb"
+  local masterPath = skinPath .. "Data\\Categories.ldb"
   local masterSerialized = SerializeTable(masterData)
   local masterSuccess = WriteToFile(masterPath, "return " .. masterSerialized)
 
@@ -593,7 +593,7 @@ function SerializeTable(tbl, indent)
 end
 
 function LogError(message)
-  local logPath = SKIN:GetVariable("CURRENTPATH") .. "..\\Logs\\errors.log"
+  local logPath = SKIN:GetVariable("CURRENTPATH") .. "Logs\\errors.log"
   local file = io.open(logPath, "a")
   if file then
     file:write(string.format("[%s] Configurator: %s\n", os.date("%Y-%m-%d %H:%M:%S"), message))

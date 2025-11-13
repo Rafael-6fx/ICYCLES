@@ -19,7 +19,7 @@ end
 function GenerateAllDrawers()
   -- Load categories
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local masterPath = skinPath .. "..\\Data\\Categories.ldb"
+  local masterPath = skinPath .. "Data\\Categories.ldb"
   local masterData = LoadDataFile(masterPath)
 
   if not masterData or not masterData.categories then
@@ -31,7 +31,7 @@ function GenerateAllDrawers()
 
   -- Generate drawer for each category
   for _, categoryName in ipairs(masterData.categories) do
-    local catPath = skinPath .. "..\\CatData\\" .. categoryName .. ".ldb"
+    local catPath = skinPath .. "CatData\\" .. categoryName .. ".ldb"
     local catData = LoadDataFile(catPath)
 
     if catData then
@@ -75,7 +75,7 @@ function GenerateDrawer(categoryName, categoryData)
 
   -- Write to file
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local outputPath = skinPath .. "..\\Drawers\\" .. categoryName .. ".ini"
+  local outputPath = skinPath .. "Drawers\\" .. categoryName .. ".ini"
 
   local success = WriteToFile(outputPath, iniContent)
 
@@ -233,7 +233,7 @@ end
 -- ========================================
 function SaveMasterData(masterData)
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local masterPath = skinPath .. "..\\Data\\Categories.ldb"
+  local masterPath = skinPath .. "Data\\Categories.ldb"
 
   local serialized = SerializeTable(masterData)
   return WriteToFile(masterPath, "return " .. serialized)
@@ -245,7 +245,7 @@ end
 function DeployDrawers()
   -- Load categories
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local masterPath = skinPath .. "..\\Data\\Categories.ldb"
+  local masterPath = skinPath .. "Data\\Categories.ldb"
   local masterData = LoadDataFile(masterPath)
 
   if not masterData or not masterData.categories then
@@ -340,7 +340,7 @@ function EscapeIniValue(str)
 end
 
 function LogError(message)
-  local logPath = SKIN:GetVariable("CURRENTPATH") .. "..\\Logs\\errors.log"
+  local logPath = SKIN:GetVariable("CURRENTPATH") .. "Logs\\errors.log"
   local file = io.open(logPath, "a")
   if file then
     file:write(string.format("[%s] Generator: %s\n", os.date("%Y-%m-%d %H:%M:%S"), message))

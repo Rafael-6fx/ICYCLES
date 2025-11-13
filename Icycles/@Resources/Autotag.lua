@@ -18,7 +18,7 @@ end
 -- ========================================
 function GenerateSuggestions()
   -- Load Desktop items
-  local itemsPath = SKIN:GetVariable("CURRENTPATH") .. "..\\Data\\ListedDesktopItems.lua"
+  local itemsPath = SKIN:GetVariable("CURRENTPATH") .. "Data\\ListedDesktopItems.lua"
   local items = LoadDataFile(itemsPath)
 
   if not items then
@@ -137,7 +137,7 @@ end
 -- ========================================
 function AutoTagAllItems()
   -- Load items
-  local itemsPath = SKIN:GetVariable("CURRENTPATH") .. "..\\Data\\ListedDesktopItems.lua"
+  local itemsPath = SKIN:GetVariable("CURRENTPATH") .. "Data\\ListedDesktopItems.lua"
   local items = LoadDataFile(itemsPath)
 
   if not items then
@@ -225,7 +225,7 @@ end
 -- ========================================
 function SaveCategories(categories)
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local catDataPath = skinPath .. "..\\CatData\\"
+  local catDataPath = skinPath .. "CatData\\"
 
   local categoryList = {}
   local order = 1
@@ -261,7 +261,7 @@ function SaveCategories(categories)
     masterData.order[i] = i
   end
 
-  local masterPath = skinPath .. "..\\Data\\Categories.ldb"
+  local masterPath = skinPath .. "Data\\Categories.ldb"
   local masterSerialized = SerializeTable(masterData)
   local masterSuccess = WriteToFile(masterPath, "return " .. masterSerialized)
 
@@ -364,7 +364,7 @@ end
 -- UTILITY: Error logging
 -- ========================================
 function LogError(message)
-  local logPath = SKIN:GetVariable("CURRENTPATH") .. "..\\Logs\\errors.log"
+  local logPath = SKIN:GetVariable("CURRENTPATH") .. "Logs\\errors.log"
   local file = io.open(logPath, "a")
   if file then
     file:write(string.format("[%s] Autotag: %s\n", os.date("%Y-%m-%d %H:%M:%S"), message))
