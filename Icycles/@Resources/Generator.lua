@@ -255,13 +255,20 @@ function DeployDrawers()
 
   -- Activate each drawer skin
   for i, categoryName in ipairs(masterData.categories) do
-    local configName = "Icycles\\Drawers\\" .. categoryName
-    SKIN:Bang("!ActivateConfig", configName, categoryName .. ".ini")
+    local configFolder = "Icycles\\Drawers"
+    local configFile = categoryName .. ".ini"
+    local configName = configFolder .. "\\" .. categoryName
+
+    print("Generator: Activating drawer: " .. configFolder .. " -> " .. configFile)
+    SKIN:Bang("!ActivateConfig", configFolder, configFile)
 
     -- Position drawers (simple vertical stack for now)
     local xPos = 50
     local yPos = 100 + (i * 60)
-    SKIN:Bang("!Move", xPos, yPos, configName)
+
+    -- Use the full config name for positioning (Icycles\Drawers\ConfigFile without extension)
+    local configFullName = "Icycles\\Drawers\\" .. categoryName:gsub("%.ini$", "")
+    SKIN:Bang("!Move", xPos, yPos, configFullName)
   end
 
   print("Generator: Deployed " .. #masterData.categories .. " drawers")
