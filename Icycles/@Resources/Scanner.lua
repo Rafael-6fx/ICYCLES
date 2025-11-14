@@ -258,6 +258,8 @@ function SerializeTable(tbl, indent)
   local spacing = string.rep("  ", indent)
   local result = "{\n"
 
+  -- CRITICAL: Use pairs() not ipairs() to iterate ALL keys (named + numeric)
+  -- ipairs() only iterates numeric indices, missing version/timestamp/items fields
   for key, value in pairs(tbl) do
     local keyStr = type(key) == "string" and string.format("%s  %s = ", spacing, key) or string.format("%s  [%d] = ", spacing, key)
 
