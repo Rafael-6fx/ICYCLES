@@ -531,12 +531,43 @@ end
 -- UI HELPER FUNCTIONS
 -- ========================================
 
+function GetDesktopItemsDisplay()
+  -- Load scanned Desktop items
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.lua"
+
+  -- Try to load the file
+  local success, itemsData = pcall(dofile, itemsFilePath)
+  if not success or not itemsData or not itemsData.items then
+    print("Configurator: No Desktop items found")
+    return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
+  end
+
+  print("Configurator: Loaded " .. #itemsData.items .. " Desktop items")
+
+  -- Format items for display
+  local result = ""
+  for i, item in ipairs(itemsData.items) do
+    local displayName = item.customName or item.name
+    -- Limit length to fit in column
+    if #displayName > 30 then
+      displayName = displayName:sub(1, 27) .. "..."
+    end
+    result = result .. displayName
+    if i < #itemsData.items then
+      result = result .. "\n"
+    end
+  end
+
+  return result
+end
+
 function GetCategoryListString()
   local categories = GetCategoriesSorted()
   print("Configurator: GetCategoryListString called, found " .. #categories .. " categories")
 
   if #categories == 0 then
-    return "No categories yet#CRLF#Click QUICK SETUP to create defaults"
+    return "No categories yet\nClick QUICK SETUP to create defaults"
   end
 
   local result = ""
@@ -544,7 +575,7 @@ function GetCategoryListString()
     local itemCount = CountItemsInCategory(categoryName)
     result = result .. categoryName .. " (" .. itemCount .. " items)"
     if i < #categories then
-      result = result .. "#CRLF#"
+      result = result .. "\n"
     end
   end
 
@@ -553,8 +584,18 @@ function GetCategoryListString()
 end
 
 function HandleCategoryClick(mouseY)
-  -- For now, just log the click
-  print("Configurator: Category clicked at Y=" .. tostring(mouseY))
+  -- Category list starts at Y=190 in Column B
+  -- Each category takes approximately 18-20 pixels (font size + spacing)
+  local listStartY = 190
+  local lineHeight = 18
+
+  -- Calculate which category was clicked (1-indexed)
+  local clickedIndex = math.floor((mouseY - listStartY) / lineHeight) + 1
+
+  print("Configurator: Category clicked at Y=" .. tostring(mouseY) .. ", calculated index=" .. clickedIndex)
+
+  -- Select the category
+  SelectCategory(clickedIndex)
 end
 
 function GetCategoryByIndex(index)
@@ -625,7 +666,7 @@ end
 function GetSelectedCategoryItems()
   local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
   if selectedIndex == 0 then
-    return "No category selected#CRLF#Click a category to view items"
+    return "No category selected\nClick a category to view items"
   end
 
   local categoryName = GetCategoryByIndex(selectedIndex)
@@ -635,7 +676,7 @@ function GetSelectedCategoryItems()
 
   local categoryData = LoadCategoryData(categoryName)
   if not categoryData or not categoryData.items or #categoryData.items == 0 then
-    return "No items in this category#CRLF#Select items in Column A and click +"
+    return "No items in this category\nSelect items in Column A and click +"
   end
 
   local result = ""
@@ -643,7 +684,7 @@ function GetSelectedCategoryItems()
     local displayName = item.customName or item.name
     result = result .. displayName
     if i < #categoryData.items then
-      result = result .. "#CRLF#"
+      result = result .. "\n"
     end
   end
 
