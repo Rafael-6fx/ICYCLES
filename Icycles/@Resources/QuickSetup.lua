@@ -77,7 +77,9 @@ function CreateDefaultCategories()
     -- Auto-select first category
     SKIN:Bang("!SetVariable", "SelectedCategoryIndex", "1")
     SKIN:Bang("!SetVariable", "SelectedCategory", "Development")
-    SKIN:Bang("!UpdateMeter", "*")
+    -- Update only the specific meters with inline Lua
+    SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
+    SKIN:Bang("!UpdateMeter", "MeterPreviewContainerText")
     SKIN:Bang("!Redraw")
     print("QuickSetup: Auto-selected first category: Development")
   else

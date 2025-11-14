@@ -183,8 +183,8 @@ function ReorderCategory(categoryName, direction)
   pendingChanges = true
   lastSaveTime = os.time()
 
-  SKIN:Bang("!UpdateMeasure", "ScriptMeasure")
-  SKIN:Bang("!UpdateMeter", "*")
+  -- Update only the category list meter
+  SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
   SKIN:Bang("!Redraw")
 
   return true
@@ -667,7 +667,9 @@ function SelectCategory(index)
   if index >= 1 and index <= #categories then
     SKIN:Bang("!SetVariable", "SelectedCategoryIndex", tostring(index))
     SKIN:Bang("!SetVariable", "SelectedCategory", categories[index])
-    SKIN:Bang("!UpdateMeter", "*")
+    -- Force update only the specific meters with inline Lua
+    SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
+    SKIN:Bang("!UpdateMeter", "MeterPreviewContainerText")
     SKIN:Bang("!Redraw")
     print("Configurator: Selected category #" .. index .. ": " .. categories[index])
   end
