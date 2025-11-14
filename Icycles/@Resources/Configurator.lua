@@ -547,6 +547,16 @@ function GetDesktopItemsDisplay()
     return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
   end
 
+  print("Configurator: File loaded successfully, type = " .. type(itemsData))
+  if itemsData then
+    print("Configurator: itemsData.items type = " .. type(itemsData.items))
+    print("Configurator: itemsData.version = " .. tostring(itemsData.version))
+    print("Configurator: itemsData.itemCount = " .. tostring(itemsData.itemCount))
+    if itemsData.items then
+      print("Configurator: itemsData.items length = " .. #itemsData.items)
+    end
+  end
+
   if not itemsData or not itemsData.items then
     print("Configurator: Items file loaded but no items table found")
     return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"

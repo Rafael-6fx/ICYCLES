@@ -190,6 +190,10 @@ function SaveScannedItems()
     items = items
   }
 
+  print("Scanner: Creating data structure with " .. #items .. " items")
+  print("Scanner: dataStructure.items type = " .. type(dataStructure.items))
+  print("Scanner: dataStructure.items length = " .. #dataStructure.items)
+
   local serialized = SerializeTable(dataStructure)
 
   -- Build file path
