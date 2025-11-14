@@ -105,7 +105,13 @@ CustomisationPath=#@#..\CatData\Customisation\
 
 ; === PAGINATION ===
 ItemsPerPage=50
-MaxCategoriesVisible=10
+MaxCategoriesVisible=15
+
+; === SELECTION STATE ===
+SelectedCategoryIndex=0
+SelectedCategory=
+SelectedItemIndex=0
+SelectedItem=
 
 ; === VERSION ===
 SchemaVersion=1.0.0

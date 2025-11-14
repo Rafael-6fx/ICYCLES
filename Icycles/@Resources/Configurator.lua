@@ -567,6 +567,81 @@ function GetCategoryIndex(categoryName)
   return 0
 end
 
+-- Category slot functions for UI (max 15 slots)
+function GetCategorySlotName(slot)
+  local categories = GetCategoriesSorted()
+  if slot >= 1 and slot <= #categories then
+    return categories[slot]
+  end
+  return ""
+end
+
+function GetCategorySlotDisplay(slot)
+  local categoryName = GetCategorySlotName(slot)
+  if categoryName == "" then
+    return ""
+  end
+  local itemCount = CountItemsInCategory(categoryName)
+  return categoryName .. " (" .. itemCount .. " items)"
+end
+
+function IsCategorySlotVisible(slot)
+  local categories = GetCategoriesSorted()
+  if slot >= 1 and slot <= #categories then
+    return 0  -- 0 = visible (Hidden=0)
+  else
+    return 1  -- 1 = hidden (Hidden=1)
+  end
+end
+
+function GetCategorySlotBgColor(slot)
+  local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+  if slot == selectedIndex then
+    return "60,180,120,120"  -- Selected: bright teal
+  else
+    return "0,0,0,0"  -- Not selected: transparent
+  end
+end
+
+function SelectCategory(index)
+  local categories = GetCategoriesSorted()
+  if index >= 1 and index <= #categories then
+    SKIN:Bang("!SetVariable", "SelectedCategoryIndex", tostring(index))
+    SKIN:Bang("!SetVariable", "SelectedCategory", categories[index])
+    SKIN:Bang("!UpdateMeter", "*")
+    SKIN:Bang("!Redraw")
+    print("Configurator: Selected category #" .. index .. ": " .. categories[index])
+  end
+end
+
+function GetSelectedCategoryItems()
+  local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+  if selectedIndex == 0 then
+    return "No category selected#CRLF#Click a category to view items"
+  end
+
+  local categoryName = GetCategoryByIndex(selectedIndex)
+  if categoryName == "" then
+    return "No category selected"
+  end
+
+  local categoryData = LoadCategoryData(categoryName)
+  if not categoryData or not categoryData.items or #categoryData.items == 0 then
+    return "No items in this category#CRLF#Select items in Column A and click +"
+  end
+
+  local result = ""
+  for i, item in ipairs(categoryData.items) do
+    local displayName = item.customName or item.name
+    result = result .. displayName
+    if i < #categoryData.items then
+      result = result .. "#CRLF#"
+    end
+  end
+
+  return result
+end
+
 -- ========================================
 -- UTILITY FUNCTIONS
 -- ========================================
