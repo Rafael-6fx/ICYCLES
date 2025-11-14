@@ -611,6 +611,47 @@ function GetCategoryListString()
   return result
 end
 
+function HandleDesktopItemClick(mouseY)
+  -- Desktop items list starts at Y=170 in Column A
+  -- Each item takes approximately 18 pixels (font size + spacing)
+  local listStartY = 170
+  local lineHeight = 18
+
+  -- Calculate which item was clicked (1-indexed)
+  local clickedIndex = math.floor((mouseY - listStartY) / lineHeight) + 1
+
+  print("Configurator: Desktop item clicked at Y=" .. tostring(mouseY) .. ", calculated index=" .. clickedIndex)
+
+  -- Load Desktop items to get the clicked item name
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.ldb"
+
+  local success, itemsData = pcall(dofile, itemsFilePath)
+  if not success or not itemsData or not itemsData.items or #itemsData.items == 0 then
+    print("Configurator: ERROR - Cannot load Desktop items for click detection")
+    return
+  end
+
+  -- Validate clicked index is within range
+  if clickedIndex < 1 or clickedIndex > #itemsData.items then
+    print("Configurator: Clicked index " .. clickedIndex .. " out of range (1-" .. #itemsData.items .. ")")
+    return
+  end
+
+  local clickedItem = itemsData.items[clickedIndex]
+  local itemName = clickedItem.customName or clickedItem.name
+
+  print("Configurator: Selected Desktop item #" .. clickedIndex .. ": " .. itemName)
+
+  -- Set the SelectedItem variable so it can be added to categories
+  SKIN:Bang("!SetVariable", "SelectedItem", itemName)
+  SKIN:Bang("!SetVariable", "SelectedItemIndex", tostring(clickedIndex))
+
+  -- Update display (visual feedback would go here)
+  SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
+  SKIN:Bang("!Redraw")
+end
+
 function HandleCategoryClick(mouseY)
   -- Category list starts at Y=190 in Column B
   -- Each category takes approximately 18-20 pixels (font size + spacing)
