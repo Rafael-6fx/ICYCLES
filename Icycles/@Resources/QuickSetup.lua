@@ -74,8 +74,12 @@ function CreateDefaultCategories()
     print("QuickSetup: Now click REBUILD LIST to scan Desktop")
     SKIN:Bang("!UpdateMeasure", "ScriptConfigurator")
     SKIN:Bang("!CommandMeasure", "ScriptConfigurator", "LoadAllCategories()")
+    -- Auto-select first category
+    SKIN:Bang("!SetVariable", "SelectedCategoryIndex", "1")
+    SKIN:Bang("!SetVariable", "SelectedCategory", "Development")
     SKIN:Bang("!UpdateMeter", "*")
     SKIN:Bang("!Redraw")
+    print("QuickSetup: Auto-selected first category: Development")
   else
     print("QuickSetup: ERROR - Failed to create master index")
   end

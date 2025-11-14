@@ -532,14 +532,23 @@ end
 -- ========================================
 
 function GetDesktopItemsDisplay()
+  print("Configurator: GetDesktopItemsDisplay() called")
+
   -- Load scanned Desktop items
   local skinPath = SKIN:GetVariable("CURRENTPATH")
   local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.lua"
 
+  print("Configurator: Looking for items at: " .. itemsFilePath)
+
   -- Try to load the file
   local success, itemsData = pcall(dofile, itemsFilePath)
-  if not success or not itemsData or not itemsData.items then
-    print("Configurator: No Desktop items found")
+  if not success then
+    print("Configurator: ERROR loading items file: " .. tostring(itemsData))
+    return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
+  end
+
+  if not itemsData or not itemsData.items then
+    print("Configurator: Items file loaded but no items table found")
     return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
   end
 
@@ -559,6 +568,7 @@ function GetDesktopItemsDisplay()
     end
   end
 
+  print("Configurator: Returning " .. #result .. " characters of item list")
   return result
 end
 
@@ -664,20 +674,36 @@ function SelectCategory(index)
 end
 
 function GetSelectedCategoryItems()
-  local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+  print("Configurator: GetSelectedCategoryItems() called")
+
+  local selectedIndexStr = SKIN:GetVariable("SelectedCategoryIndex") or "0"
+  local selectedIndex = tonumber(selectedIndexStr) or 0
+
+  print("Configurator: SelectedCategoryIndex = " .. selectedIndex)
+
   if selectedIndex == 0 then
     return "No category selected\nClick a category to view items"
   end
 
   local categoryName = GetCategoryByIndex(selectedIndex)
+  print("Configurator: Category name at index " .. selectedIndex .. " = " .. (categoryName or "nil"))
+
   if categoryName == "" then
     return "No category selected"
   end
 
   local categoryData = LoadCategoryData(categoryName)
-  if not categoryData or not categoryData.items or #categoryData.items == 0 then
+  if not categoryData then
+    print("Configurator: ERROR - Could not load category data for: " .. categoryName)
+    return "Error loading category data"
+  end
+
+  if not categoryData.items or #categoryData.items == 0 then
+    print("Configurator: Category " .. categoryName .. " has no items")
     return "No items in this category\nSelect items in Column A and click +"
   end
+
+  print("Configurator: Found " .. #categoryData.items .. " items in " .. categoryName)
 
   local result = ""
   for i, item in ipairs(categoryData.items) do

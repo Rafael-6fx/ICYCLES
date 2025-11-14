@@ -217,6 +217,11 @@ function SaveScannedItems()
   end
 
   print("Scanner: Saved " .. #items .. " items successfully")
+
+  -- Trigger UI update to refresh Desktop items display
+  SKIN:Bang("!UpdateMeter", "*")
+  SKIN:Bang("!Redraw")
+
   return true
 end
 
