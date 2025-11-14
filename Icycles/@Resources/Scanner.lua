@@ -47,15 +47,22 @@ end
 function ReadFileList(listPath, desktopPath)
   local items = {}
 
+  print("Scanner: Attempting to read file list from: " .. listPath)
+
   local file = io.open(listPath, "r")
   if not file then
     LogError("Cannot open file list: " .. listPath)
     LogError("Make sure RunCommand measure has executed successfully")
+    LogError("Try clicking REBUILD LIST again and wait a moment")
     return items
   end
 
+  local lineCount = 0
   for line in file:lines() do
+    lineCount = lineCount + 1
     local filename = line:match("^(.+)$")
+
+    print("Scanner: Processing line " .. lineCount .. ": " .. (filename or "[empty]"))
 
     if filename and filename ~= "" then
       -- Skip system files
@@ -68,12 +75,16 @@ function ReadFileList(listPath, desktopPath)
 
         if itemData then
           table.insert(items, itemData)
+          print("Scanner: Added item: " .. itemData.name)
         end
+      else
+        print("Scanner: Skipped system file: " .. filename)
       end
     end
   end
 
   file:close()
+  print("Scanner: Read " .. lineCount .. " lines from temp file")
 
   -- Sort alphabetically by name
   table.sort(items, function(a, b)
