@@ -37,6 +37,10 @@ TextMeta=120,120,125,180
 AccentColor=180,180,190,255
 AccentHighlight=200,200,210,255
 
+; Primary Action Colors (for Quick Setup, Generate Drawers)
+PrimaryAccentColor=60,180,120,220
+PrimaryAccentHighlight=80,200,140,255
+
 ; Interactive States
 HighlightBg=40,40,45,200
 HoverBg=35,35,40,180
