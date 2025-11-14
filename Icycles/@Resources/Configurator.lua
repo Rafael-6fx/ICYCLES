@@ -557,7 +557,15 @@ function GetDesktopItemsDisplay()
     end
   end
 
-  if not itemsData or not itemsData.items then
+  if not itemsData or not itemsData.items or #itemsData.items == 0 then
+    if not itemsData then
+      print("Configurator: itemsData is nil")
+    elseif not itemsData.items then
+      print("Configurator: itemsData.items is nil")
+    else
+      print("Configurator: itemsData.items is EMPTY ARRAY (length = 0)")
+      print("Configurator: This means Scanner returned no items - check UserDesktopData.ldb")
+    end
     print("Configurator: Items file loaded but no items table found")
     return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
   end
