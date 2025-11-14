@@ -2,7 +2,7 @@
 -- ICYCLES - Desktop Scanner
 -- ========================================
 -- Scans Desktop directory for items
--- Outputs to Data/ListedDesktopItems.lua
+-- Outputs to Data/ListedDesktopItems.ldb
 -- NOTE: Uses RunCommand measure from Icycles.ini to enumerate files
 -- ========================================
 
@@ -194,7 +194,7 @@ function SaveScannedItems()
 
   -- Build file path
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local filePath = skinPath .. "Data\\ListedDesktopItems.lua"
+  local filePath = skinPath .. "Data\\ListedDesktopItems.ldb"
 
   -- Write to temp file first (atomic write)
   local tempPath = filePath .. ".tmp"
@@ -211,7 +211,7 @@ function SaveScannedItems()
   end)
 
   if not writeSuccess then
-    LogError("Failed to write ListedDesktopItems.lua: " .. tostring(err))
+    LogError("Failed to write ListedDesktopItems.ldb: " .. tostring(err))
     return false
   end
 
@@ -220,7 +220,7 @@ function SaveScannedItems()
   local renameSuccess = os.rename(tempPath, filePath)
 
   if not renameSuccess then
-    LogError("Failed to rename temp file to ListedDesktopItems.lua")
+    LogError("Failed to rename temp file to ListedDesktopItems.ldb")
     return false
   end
 

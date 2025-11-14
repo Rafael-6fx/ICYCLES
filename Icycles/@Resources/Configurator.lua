@@ -211,7 +211,7 @@ function AddItemToCategory(itemName, categoryName)
 
   -- Load item data from ListedDesktopItems
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local itemsPath = skinPath .. "Data\\ListedDesktopItems.lua"
+  local itemsPath = skinPath .. "Data\\ListedDesktopItems.ldb"
   local allItems = LoadDataFile(itemsPath)
 
   if not allItems then
@@ -536,7 +536,7 @@ function GetDesktopItemsDisplay()
 
   -- Load scanned Desktop items
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.lua"
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.ldb"
 
   print("Configurator: Looking for items at: " .. itemsFilePath)
 
