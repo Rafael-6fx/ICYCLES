@@ -70,8 +70,8 @@ function CreateDefaultCategories()
   local masterSuccess = WriteToFile(masterPath, "return " .. masterSerialized)
 
   if masterSuccess then
-    print("QuickSetup: ✓ All categories created successfully!")
-    print("QuickSetup: Now refresh the skin and try scanning Desktop")
+    print("QuickSetup: [OK] All categories created successfully!")
+    print("QuickSetup: Now click REBUILD LIST to scan Desktop")
     SKIN:Bang("!UpdateMeasure", "ScriptConfigurator")
     SKIN:Bang("!CommandMeasure", "ScriptConfigurator", "LoadAllCategories()")
     SKIN:Bang("!UpdateMeter", "*")
