@@ -96,12 +96,12 @@ AutoSaveInterval=5000
 
 ; === DATA PATHS ===
 ; These are relative to skin root
-DataPath=#@#..\Data\
-CatDataPath=#@#..\CatData\
-DrawersPath=#@#..\Drawers\
-BackupsPath=#@#..\Backups\
-LogsPath=#@#..\Logs\
-CustomisationPath=#@#..\CatData\Customisation\
+DataPath=#CURRENTPATH#Data\
+CatDataPath=#CURRENTPATH#CatData\
+DrawersPath=#CURRENTPATH#Drawers\
+BackupsPath=#CURRENTPATH#Backups\
+LogsPath=#CURRENTPATH#Logs\
+CustomisationPath=#CURRENTPATH#CatData\Customisation\
 
 ; === PAGINATION ===
 ItemsPerPage=50

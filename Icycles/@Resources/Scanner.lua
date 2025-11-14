@@ -181,8 +181,16 @@ function SaveScannedItems()
     return false
   end
 
-  -- Serialize items
-  local serialized = SerializeTable(items)
+  -- Wrap items in proper data structure with metadata
+  local dataStructure = {
+    version = "1.0.0",
+    timestamp = os.time(),
+    lastScan = os.date("%Y-%m-%d %H:%M:%S"),
+    itemCount = #items,
+    items = items
+  }
+
+  local serialized = SerializeTable(dataStructure)
 
   -- Build file path
   local skinPath = SKIN:GetVariable("CURRENTPATH")
