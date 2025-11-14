@@ -572,18 +572,40 @@ function GetDesktopItemsDisplay()
 
   print("Configurator: Loaded " .. #itemsData.items .. " Desktop items")
 
+  -- Get pagination settings
+  local itemsPerPage = tonumber(SKIN:GetVariable("ItemsPerPage")) or 50
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+  local totalItems = #itemsData.items
+  local totalPages = math.ceil(totalItems / itemsPerPage)
+
+  -- Ensure current page is valid
+  if currentPage < 1 then currentPage = 1 end
+  if currentPage > totalPages then currentPage = totalPages end
+
+  -- Calculate start and end indices for current page
+  local startIndex = ((currentPage - 1) * itemsPerPage) + 1
+  local endIndex = math.min(currentPage * itemsPerPage, totalItems)
+
+  print("Configurator: Showing page " .. currentPage .. "/" .. totalPages .. " (items " .. startIndex .. "-" .. endIndex .. ")")
+
   -- Format items for display
   local result = ""
-  for i, item in ipairs(itemsData.items) do
+  for i = startIndex, endIndex do
+    local item = itemsData.items[i]
     local displayName = item.customName or item.name
     -- Limit length to fit in column
     if #displayName > 30 then
       displayName = displayName:sub(1, 27) .. "..."
     end
     result = result .. displayName
-    if i < #itemsData.items then
+    if i < endIndex then
       result = result .. "\n"
     end
+  end
+
+  -- Add pagination info at bottom if there are multiple pages
+  if totalPages > 1 then
+    result = result .. "\n\n--- Page " .. currentPage .. " of " .. totalPages .. " ---"
   end
 
   print("Configurator: Returning " .. #result .. " characters of item list")
@@ -617,10 +639,10 @@ function HandleDesktopItemClick(mouseY)
   local listStartY = 170
   local lineHeight = 18
 
-  -- Calculate which item was clicked (1-indexed)
-  local clickedIndex = math.floor((mouseY - listStartY) / lineHeight) + 1
+  -- Calculate which item was clicked on the CURRENT PAGE (1-indexed)
+  local clickedPageIndex = math.floor((mouseY - listStartY) / lineHeight) + 1
 
-  print("Configurator: Desktop item clicked at Y=" .. tostring(mouseY) .. ", calculated index=" .. clickedIndex)
+  print("Configurator: Desktop item clicked at Y=" .. tostring(mouseY) .. ", page index=" .. clickedPageIndex)
 
   -- Load Desktop items to get the clicked item name
   local skinPath = SKIN:GetVariable("CURRENTPATH")
@@ -632,20 +654,28 @@ function HandleDesktopItemClick(mouseY)
     return
   end
 
-  -- Validate clicked index is within range
-  if clickedIndex < 1 or clickedIndex > #itemsData.items then
-    print("Configurator: Clicked index " .. clickedIndex .. " out of range (1-" .. #itemsData.items .. ")")
+  -- Get pagination settings to calculate actual item index
+  local itemsPerPage = tonumber(SKIN:GetVariable("ItemsPerPage")) or 50
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+  local totalItems = #itemsData.items
+
+  -- Calculate actual index in full item list
+  local actualIndex = ((currentPage - 1) * itemsPerPage) + clickedPageIndex
+
+  -- Validate actual index is within range
+  if actualIndex < 1 or actualIndex > totalItems then
+    print("Configurator: Clicked index " .. actualIndex .. " out of range (1-" .. totalItems .. ")")
     return
   end
 
-  local clickedItem = itemsData.items[clickedIndex]
+  local clickedItem = itemsData.items[actualIndex]
   local itemName = clickedItem.customName or clickedItem.name
 
-  print("Configurator: Selected Desktop item #" .. clickedIndex .. ": " .. itemName)
+  print("Configurator: Selected Desktop item #" .. actualIndex .. " (page " .. currentPage .. ", position " .. clickedPageIndex .. "): " .. itemName)
 
   -- Set the SelectedItem variable so it can be added to categories
   SKIN:Bang("!SetVariable", "SelectedItem", itemName)
-  SKIN:Bang("!SetVariable", "SelectedItemIndex", tostring(clickedIndex))
+  SKIN:Bang("!SetVariable", "SelectedItemIndex", tostring(actualIndex))
 
   -- Update display (visual feedback would go here)
   SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
@@ -731,6 +761,49 @@ function SelectCategory(index)
     SKIN:Bang("!UpdateMeter", "MeterPreviewContainerText")
     SKIN:Bang("!Redraw")
     print("Configurator: Selected category #" .. index .. ": " .. categories[index])
+  end
+end
+
+-- ========================================
+-- PAGINATION FUNCTIONS
+-- ========================================
+
+function NextItemPage()
+  -- Load Desktop items to get total count
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.ldb"
+
+  local success, itemsData = pcall(dofile, itemsFilePath)
+  if not success or not itemsData or not itemsData.items then
+    print("Configurator: Cannot navigate pages - no items loaded")
+    return
+  end
+
+  local itemsPerPage = tonumber(SKIN:GetVariable("ItemsPerPage")) or 50
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+  local totalItems = #itemsData.items
+  local totalPages = math.ceil(totalItems / itemsPerPage)
+
+  if currentPage < totalPages then
+    SKIN:Bang("!SetVariable", "CurrentItemPage", tostring(currentPage + 1))
+    SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
+    SKIN:Bang("!Redraw")
+    print("Configurator: Next page -> " .. (currentPage + 1) .. "/" .. totalPages)
+  else
+    print("Configurator: Already on last page (" .. totalPages .. ")")
+  end
+end
+
+function PreviousItemPage()
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+
+  if currentPage > 1 then
+    SKIN:Bang("!SetVariable", "CurrentItemPage", tostring(currentPage - 1))
+    SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
+    SKIN:Bang("!Redraw")
+    print("Configurator: Previous page -> " .. (currentPage - 1))
+  else
+    print("Configurator: Already on first page")
   end
 end
 

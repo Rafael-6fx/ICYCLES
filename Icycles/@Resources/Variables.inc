@@ -106,6 +106,7 @@ CustomisationPath=#CURRENTPATH#CatData\Customisation\
 ; === PAGINATION ===
 ItemsPerPage=50
 MaxCategoriesVisible=15
+CurrentItemPage=1
 
 ; === SELECTION STATE ===
 SelectedCategoryIndex=0
