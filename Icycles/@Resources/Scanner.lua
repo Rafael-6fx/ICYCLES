@@ -258,27 +258,20 @@ function SerializeTable(tbl, indent)
   local spacing = string.rep("  ", indent)
   local result = "{\n"
 
-  for i, item in ipairs(tbl) do
-    result = result .. spacing .. "  {\n"
+  for key, value in pairs(tbl) do
+    local keyStr = type(key) == "string" and string.format("%s  %s = ", spacing, key) or string.format("%s  [%d] = ", spacing, key)
 
-    -- Serialize each field
-    for key, value in pairs(item) do
-      local keyStr = string.format("%s    %s = ", spacing, key)
-
-      if type(value) == "table" then
-        result = result .. keyStr .. SerializeTable(value, indent + 2) .. ",\n"
-      elseif type(value) == "string" then
-        result = result .. keyStr .. string.format("%q", value) .. ",\n"
-      elseif type(value) == "number" then
-        result = result .. keyStr .. tostring(value) .. ",\n"
-      elseif type(value) == "boolean" then
-        result = result .. keyStr .. tostring(value) .. ",\n"
-      else
-        result = result .. keyStr .. "nil,\n"
-      end
+    if type(value) == "table" then
+      result = result .. keyStr .. SerializeTable(value, indent + 1) .. ",\n"
+    elseif type(value) == "string" then
+      result = result .. keyStr .. string.format("%q", value) .. ",\n"
+    elseif type(value) == "number" then
+      result = result .. keyStr .. tostring(value) .. ",\n"
+    elseif type(value) == "boolean" then
+      result = result .. keyStr .. tostring(value) .. ",\n"
+    else
+      result = result .. keyStr .. "nil,\n"
     end
-
-    result = result .. spacing .. "  },\n"
   end
 
   result = result .. spacing .. "}"
