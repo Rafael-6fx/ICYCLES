@@ -528,6 +528,46 @@ function CountItemsInCategory(categoryName)
 end
 
 -- ========================================
+-- UI HELPER FUNCTIONS
+-- ========================================
+
+function GetCategoryListString()
+  local categories = GetCategoriesSorted()
+  if #categories == 0 then
+    return "No categories yet#CRLF#Click QUICK SETUP to create defaults"
+  end
+
+  local result = ""
+  for i, categoryName in ipairs(categories) do
+    local itemCount = CountItemsInCategory(categoryName)
+    result = result .. categoryName .. " (" .. itemCount .. " items)"
+    if i < #categories then
+      result = result .. "#CRLF#"
+    end
+  end
+
+  return result
+end
+
+function GetCategoryByIndex(index)
+  local categories = GetCategoriesSorted()
+  if index >= 1 and index <= #categories then
+    return categories[index]
+  end
+  return ""
+end
+
+function GetCategoryIndex(categoryName)
+  local categories = GetCategoriesSorted()
+  for i, name in ipairs(categories) do
+    if name == categoryName then
+      return i
+    end
+  end
+  return 0
+end
+
+-- ========================================
 -- UTILITY FUNCTIONS
 -- ========================================
 
