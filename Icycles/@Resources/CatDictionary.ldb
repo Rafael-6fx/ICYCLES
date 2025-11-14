@@ -1,0 +1,69 @@
+-- ========================================
+-- ICYCLES - Category Dictionary
+-- ========================================
+-- Keyword mappings for auto-tagging Desktop items
+-- Matches against filename and target path
+-- ========================================
+
+return {
+  Development = {
+    keywords = {
+      "code", "visual studio", "vscode", "vs code", "git", "github", "gitlab", "bitbucket",
+      "python", "node", "nodejs", "npm", "terminal", "cmd", "powershell", "bash", "shell",
+      "jetbrains", "intellij", "pycharm", "webstorm", "rider", "phpstorm",
+      "sublime", "atom", "notepad++", "vim", "emacs",
+      "docker", "kubernetes", "postman", "insomnia", "api",
+      "database", "mysql", "postgres", "mongodb", "redis",
+      "android studio", "xcode", "unity", "unreal", "godot"
+    },
+    extensions = {"py", "js", "ts", "cpp", "c", "h", "hpp", "lua", "sh", "rb", "go", "rs", "java", "cs", "php"}
+  },
+
+  Creative = {
+    keywords = {
+      "photoshop", "illustrator", "indesign", "adobe", "lightroom", "premiere", "after effects",
+      "blender", "maya", "3ds max", "cinema 4d", "zbrush", "houdini",
+      "substance", "painter", "designer", "figma", "sketch", "xd",
+      "gimp", "inkscape", "krita", "affinity", "designer", "photo",
+      "davinci", "resolve", "premiere", "final cut",
+      "3d", "render", "model", "texture", "animation"
+    },
+    extensions = {"psd", "ai", "indd", "fig", "sketch", "blend", "max", "ma", "mb", "c4d", "aep", "prproj"}
+  },
+
+  Gaming = {
+    keywords = {
+      "steam", "epic", "gog", "origin", "uplay", "ubisoft", "ea", "battle.net", "blizzard",
+      "game", "minecraft", "valorant", "league", "dota", "csgo", "fortnite",
+      "xbox", "playstation", "nintendo", "emulator", "rpcs3", "yuzu", "dolphin",
+      "discord", "teamspeak", "mumble", "obs", "streamlabs",
+      "nvidia", "geforce", "amd", "radeon", "msi afterburner"
+    },
+    extensions = {}  -- Gaming typically identified by keywords/paths, not extensions
+  },
+
+  Tools = {
+    keywords = {
+      "chrome", "firefox", "brave", "edge", "opera", "browser",
+      "notepad", "calculator", "calc", "explorer", "paint",
+      "7zip", "winrar", "zip", "archive", "extract",
+      "vlc", "media player", "spotify", "music", "video",
+      "rainmeter", "wallpaper", "taskbar", "widget",
+      "ccleaner", "malwarebytes", "antivirus", "cleanup",
+      "everything", "search", "launcher", "autohotkey"
+    },
+    extensions = {"txt", "log", "zip", "rar", "7z", "mp3", "mp4", "avi", "mkv"}
+  },
+
+  Office = {
+    keywords = {
+      "word", "excel", "powerpoint", "outlook", "onenote", "teams", "onedrive",
+      "office", "microsoft", "365",
+      "acrobat", "reader", "pdf", "foxit",
+      "notion", "evernote", "obsidian", "roam",
+      "slack", "zoom", "meet", "skype", "webex",
+      "calendar", "mail", "email", "document", "spreadsheet", "presentation"
+    },
+    extensions = {"docx", "doc", "xlsx", "xls", "pptx", "ppt", "pdf", "odt", "ods", "odp"}
+  }
+}
