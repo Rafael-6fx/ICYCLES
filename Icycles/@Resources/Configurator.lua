@@ -533,6 +533,8 @@ end
 
 function GetCategoryListString()
   local categories = GetCategoriesSorted()
+  print("Configurator: GetCategoryListString called, found " .. #categories .. " categories")
+
   if #categories == 0 then
     return "No categories yet#CRLF#Click QUICK SETUP to create defaults"
   end
@@ -546,7 +548,13 @@ function GetCategoryListString()
     end
   end
 
+  print("Configurator: Returning category list: " .. result:sub(1, 50))
   return result
+end
+
+function HandleCategoryClick(mouseY)
+  -- For now, just log the click
+  print("Configurator: Category clicked at Y=" .. tostring(mouseY))
 end
 
 function GetCategoryByIndex(index)
