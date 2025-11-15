@@ -1,4 +1,4 @@
-﻿﻿-- ========================================
+-- ========================================
 -- ICYCLES - Drawer Widget Generator
 -- ========================================
 -- Generates drawer .ini files from category data
