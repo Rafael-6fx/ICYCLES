@@ -937,23 +937,15 @@ end
 -- ========================================
 
 function GetActualLineHeight(fontSize)
-  -- Query Rainmeter's actual text rendering height
-  local measureName = "MeasureLineHeight" .. fontSize
-  local measure = SKIN:GetMeasure(measureName)
-
-  if measure then
-    local height = measure:GetH()
-    if height > 0 then
-      print("Configurator: Using actual line height: " .. height .. "px for fontSize=" .. fontSize)
-      return height
-    end
+  -- Delegate to LayoutHelper for font-independent metrics
+  local layoutHelper = SKIN:GetMeasure("ScriptLayoutHelper")
+  if layoutHelper then
+    return layoutHelper:GetActualLineHeight(fontSize)
+  else
+    -- Fallback if LayoutHelper not available
+    print("Configurator: WARNING - LayoutHelper not available, using fallback")
+    return math.ceil(fontSize * 1.5)
   end
-
-  -- Fallback: estimate based on typical font metrics
-  -- Most fonts: line height ≈ fontSize * 1.4-1.6
-  local estimatedHeight = math.ceil(fontSize * 1.5)
-  print("Configurator: WARNING - Using estimated line height: " .. estimatedHeight .. "px")
-  return estimatedHeight
 end
 
 -- ========================================
