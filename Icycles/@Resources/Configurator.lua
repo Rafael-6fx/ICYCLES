@@ -697,7 +697,8 @@ function HandleDesktopItemClick(mouseY)
   SKIN:Bang("!SetVariable", "SelectedItem", itemName)
   SKIN:Bang("!SetVariable", "SelectedItemIndex", tostring(actualIndex))
 
-  -- Update display (visual feedback would go here)
+  -- Force measure update to pick up new variable, then update meter
+  SKIN:Bang("!UpdateMeasure", "ScriptConfigurator")
   SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
   SKIN:Bang("!Redraw")
 end
@@ -776,12 +777,53 @@ function SelectCategory(index)
   if index >= 1 and index <= #categories then
     SKIN:Bang("!SetVariable", "SelectedCategoryIndex", tostring(index))
     SKIN:Bang("!SetVariable", "SelectedCategory", categories[index])
-    -- Force update only the specific meters with inline Lua
+    -- Force measure update to pick up new variables
+    SKIN:Bang("!UpdateMeasure", "ScriptConfigurator")
+    -- Update all affected meters
     SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
     SKIN:Bang("!UpdateMeter", "MeterPreviewContainerText")
+    SKIN:Bang("!UpdateMeter", "MeterSelectedCategoryName")
     SKIN:Bang("!Redraw")
     print("Configurator: Selected category #" .. index .. ": " .. categories[index])
   end
+end
+
+-- ========================================
+-- CATEGORY NAVIGATION
+-- ========================================
+
+function NextCategory()
+  local categories = GetCategoriesSorted()
+  local currentIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+
+  if #categories == 0 then
+    print("Configurator: No categories to navigate")
+    return
+  end
+
+  local nextIndex = currentIndex + 1
+  if nextIndex > #categories then
+    nextIndex = 1  -- Wrap around to first category
+  end
+
+  SelectCategory(nextIndex)
+end
+
+function PreviousCategory()
+  local categories = GetCategoriesSorted()
+  local currentIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+
+  if #categories == 0 then
+    print("Configurator: No categories to navigate")
+    return
+  end
+
+  local prevIndex = currentIndex - 1
+  if prevIndex < 1 then
+    prevIndex = #categories  -- Wrap around to last category
+  end
+
+  SelectCategory(prevIndex)
 end
 
 -- ========================================
