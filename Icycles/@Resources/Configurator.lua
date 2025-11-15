@@ -603,7 +603,7 @@ function GetDesktopItemsDisplay()
 
     -- Add visual indicator for selected item
     if i == selectedItemIndex then
-      result = result .. "> " .. displayName
+      result = result .. "▸ " .. displayName
     else
       result = result .. "  " .. displayName
     end
@@ -639,7 +639,7 @@ function GetCategoryListString()
 
     -- Add visual indicator for selected category
     if i == selectedIndex then
-      result = result .. "> " .. categoryName .. " (" .. itemCount .. " items)"
+      result = result .. "▸ " .. categoryName .. " (" .. itemCount .. " items)"
     else
       result = result .. "  " .. categoryName .. " (" .. itemCount .. " items)"
     end
@@ -656,7 +656,10 @@ end
 function HandleDesktopItemClick(mouseY)
   -- Desktop items list starts at Y=170 in Column A (MeterItemContainerText)
   local itemListY = 170
-  local lineHeight = 18
+
+  -- Get ACTUAL line height from Rainmeter (font-independent!)
+  local fontSize = tonumber(SKIN:GetVariable("ItemSize")) or 10
+  local lineHeight = GetActualLineHeight(fontSize)
 
   -- Calculate relative Y and which item was clicked on the CURRENT PAGE (1-indexed)
   local relativeY = mouseY - itemListY
@@ -710,12 +713,13 @@ function HandleDesktopItemClick(mouseY)
 end
 
 function HandleCategoryClick(mouseY)
-  -- MeterCategoryListText is at Y=190 but we need to get actual position
-  local meterY = tonumber(SKIN:GetVariable("ColumnBX")) or 408  -- Fallback from variables
-  local categoryListY = 190  -- Static Y position
+  -- MeterCategoryListText is at Y=190
+  local categoryListY = 190
 
-  -- Each category line takes approximately 18 pixels (font size + spacing)
-  local lineHeight = 18
+  -- Get ACTUAL line height from Rainmeter's rendering
+  -- This is font-independent and adapts to font changes!
+  local fontSize = tonumber(SKIN:GetVariable("ItemSize")) or 10
+  local lineHeight = GetActualLineHeight(fontSize)
 
   -- Calculate relative Y position within the meter
   local relativeY = mouseY - categoryListY
@@ -926,6 +930,30 @@ function GetSelectedCategoryItems()
   end
 
   return result
+end
+
+-- ========================================
+-- LAYOUT HELPER FUNCTIONS
+-- ========================================
+
+function GetActualLineHeight(fontSize)
+  -- Query Rainmeter's actual text rendering height
+  local measureName = "MeasureLineHeight" .. fontSize
+  local measure = SKIN:GetMeasure(measureName)
+
+  if measure then
+    local height = measure:GetH()
+    if height > 0 then
+      print("Configurator: Using actual line height: " .. height .. "px for fontSize=" .. fontSize)
+      return height
+    end
+  end
+
+  -- Fallback: estimate based on typical font metrics
+  -- Most fonts: line height ≈ fontSize * 1.4-1.6
+  local estimatedHeight = math.ceil(fontSize * 1.5)
+  print("Configurator: WARNING - Using estimated line height: " .. estimatedHeight .. "px")
+  return estimatedHeight
 end
 
 -- ========================================
