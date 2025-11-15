@@ -55,35 +55,45 @@ function ReadDesktopDirectly(desktopPath)
     return items
   end
 
-  -- Get file count - FileView returns count when getting string value with no index
-  local fileCount = tonumber(fileViewMeasure:GetStringValue()) or 0
-  print("Scanner: FileView reports " .. fileCount .. " items")
+  -- FileView plugin: Loop through indices until we get empty result
+  -- GetStringValue() with NO parameter returns PATH, not count!
+  -- GetStringValue(index) returns filename at that index (1-based)
+  local i = 1
+  local maxFiles = 200  -- Safety limit (matches Count setting in ini)
 
-  -- Read each file from FileView using index
-  for i = 1, fileCount do
-    -- FileView GetStringValue(Index) returns filename at that index (1-based)
+  print("Scanner: Starting FileView iteration...")
+
+  while i <= maxFiles do
     local filename = fileViewMeasure:GetStringValue(i)
 
-    if filename and filename ~= "" then
-      print("Scanner: Processing item " .. i .. ": " .. filename)
-
-      -- Skip system files
-      if not filename:match("^desktop%.ini$") and
-         not filename:match("^Thumbs%.db$") and
-         not filename:match("%.tmp$") then
-
-        local fullPath = desktopPath .. "\\" .. filename
-        local itemData = ExtractItemData(fullPath, filename)
-
-        if itemData then
-          table.insert(items, itemData)
-          print("Scanner: Added item: " .. itemData.name)
-        end
-      else
-        print("Scanner: Skipped system file: " .. filename)
-      end
+    -- Stop when we get nil or empty string (no more files)
+    if not filename or filename == "" then
+      print("Scanner: Reached end of file list at index " .. i)
+      break
     end
+
+    print("Scanner: Processing item " .. i .. ": " .. filename)
+
+    -- Skip system files
+    if not filename:match("^desktop%.ini$") and
+       not filename:match("^Thumbs%.db$") and
+       not filename:match("%.tmp$") then
+
+      local fullPath = desktopPath .. "\\" .. filename
+      local itemData = ExtractItemData(fullPath, filename)
+
+      if itemData then
+        table.insert(items, itemData)
+        print("Scanner: Added item: " .. itemData.name)
+      end
+    else
+      print("Scanner: Skipped system file: " .. filename)
+    end
+
+    i = i + 1
   end
+
+  print("Scanner: FileView iteration complete - found " .. #items .. " items")
 
   -- Sort alphabetically by name
   table.sort(items, function(a, b)
