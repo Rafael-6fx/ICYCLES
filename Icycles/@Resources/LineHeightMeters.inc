@@ -5,6 +5,15 @@
 ; Used by Configurator.lua for font-independent click detection
 ; ========================================
 
+[MeasureLineHeight9]
+Measure=String
+Text=Ag
+FontFace=#FontFamily#
+FontSize=9
+FontWeight=#FontMedium#
+AntiAlias=1
+Hidden=1
+
 [MeasureLineHeight10]
 Measure=String
 Text=Ag
