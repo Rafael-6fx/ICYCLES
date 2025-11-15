@@ -603,7 +603,7 @@ function GetDesktopItemsDisplay()
 
     -- Add visual indicator for selected item
     if i == selectedItemIndex then
-      result = result .. "► " .. displayName
+      result = result .. "> " .. displayName
     else
       result = result .. "  " .. displayName
     end
@@ -639,7 +639,7 @@ function GetCategoryListString()
 
     -- Add visual indicator for selected category
     if i == selectedIndex then
-      result = result .. "► " .. categoryName .. " (" .. itemCount .. " items)"
+      result = result .. "> " .. categoryName .. " (" .. itemCount .. " items)"
     else
       result = result .. "  " .. categoryName .. " (" .. itemCount .. " items)"
     end
@@ -654,15 +654,21 @@ function GetCategoryListString()
 end
 
 function HandleDesktopItemClick(mouseY)
-  -- Desktop items list starts at Y=170 in Column A
-  -- Each item takes approximately 18 pixels (font size + spacing)
-  local listStartY = 170
+  -- Desktop items list starts at Y=170 in Column A (MeterItemContainerText)
+  local itemListY = 170
   local lineHeight = 18
 
-  -- Calculate which item was clicked on the CURRENT PAGE (1-indexed)
-  local clickedPageIndex = math.floor((mouseY - listStartY) / lineHeight) + 1
+  -- Calculate relative Y and which item was clicked on the CURRENT PAGE (1-indexed)
+  local relativeY = mouseY - itemListY
+  local clickedPageIndex = math.floor(relativeY / lineHeight) + 1
 
-  print("Configurator: Desktop item clicked at Y=" .. tostring(mouseY) .. ", page index=" .. clickedPageIndex)
+  print("Configurator: Desktop item clicked at mouseY=" .. tostring(mouseY) .. ", itemListY=" .. tostring(itemListY) .. ", relativeY=" .. tostring(relativeY) .. ", page index=" .. clickedPageIndex)
+
+  -- Validate click is within list area
+  if clickedPageIndex < 1 then
+    print("Configurator: ERROR - Click was above item list, ignoring")
+    return
+  end
 
   -- Load Desktop items to get the clicked item name
   local skinPath = SKIN:GetVariable("CURRENTPATH")
@@ -704,18 +710,27 @@ function HandleDesktopItemClick(mouseY)
 end
 
 function HandleCategoryClick(mouseY)
-  -- Category list starts at Y=190 in Column B
-  -- Each category takes approximately 18-20 pixels (font size + spacing)
-  local listStartY = 190
+  -- MeterCategoryListText is at Y=190 but we need to get actual position
+  local meterY = tonumber(SKIN:GetVariable("ColumnBX")) or 408  -- Fallback from variables
+  local categoryListY = 190  -- Static Y position
+
+  -- Each category line takes approximately 18 pixels (font size + spacing)
   local lineHeight = 18
 
+  -- Calculate relative Y position within the meter
+  local relativeY = mouseY - categoryListY
+
   -- Calculate which category was clicked (1-indexed)
-  local clickedIndex = math.floor((mouseY - listStartY) / lineHeight) + 1
+  local clickedIndex = math.floor(relativeY / lineHeight) + 1
 
-  print("Configurator: Category clicked at Y=" .. tostring(mouseY) .. ", calculated index=" .. clickedIndex)
+  print("Configurator: Category clicked at mouseY=" .. tostring(mouseY) .. ", categoryListY=" .. tostring(categoryListY) .. ", relativeY=" .. tostring(relativeY) .. ", calculated index=" .. clickedIndex)
 
-  -- Select the category
-  SelectCategory(clickedIndex)
+  -- Validate index is positive and select
+  if clickedIndex >= 1 then
+    SelectCategory(clickedIndex)
+  else
+    print("Configurator: ERROR - Negative index " .. clickedIndex .. ", click was above list")
+  end
 end
 
 function GetCategoryByIndex(index)
@@ -782,7 +797,7 @@ function SelectCategory(index)
     -- Update all affected meters
     SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
     SKIN:Bang("!UpdateMeter", "MeterPreviewContainerText")
-    SKIN:Bang("!UpdateMeter", "MeterSelectedCategoryName")
+    SKIN:Bang("!UpdateMeter", "MeterCurrentCategoryName")
     SKIN:Bang("!Redraw")
     print("Configurator: Selected category #" .. index .. ": " .. categories[index])
   end
@@ -916,6 +931,22 @@ end
 -- ========================================
 -- UTILITY FUNCTIONS
 -- ========================================
+
+function LoadCategoryData(categoryName)
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local catDataPath = skinPath .. "CatData\\" .. categoryName .. ".ldb"
+
+  print("Configurator: Loading category data from: " .. catDataPath)
+
+  local data = LoadDataFile(catDataPath)
+  if data then
+    print("Configurator: Successfully loaded category: " .. categoryName)
+    return data
+  else
+    print("Configurator: Failed to load category: " .. categoryName)
+    return nil
+  end
+end
 
 function LoadDataFile(path)
   local success, result = pcall(dofile, path)

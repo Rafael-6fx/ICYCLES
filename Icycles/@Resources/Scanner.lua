@@ -48,15 +48,12 @@ function ReadDesktopDirectly(desktopPath)
 
   print("Scanner: Reading Desktop files directly via FileView")
 
-  -- Get the FileView measure
+  -- Get the FileView measure (should already be updated by button action)
   local fileViewMeasure = SKIN:GetMeasure("MeasureDesktopFileView")
   if not fileViewMeasure then
     LogError("Cannot find MeasureDesktopFileView - FileView plugin not loaded")
     return items
   end
-
-  -- FileView measure needs to be updated first
-  SKIN:Bang("!UpdateMeasure", "MeasureDesktopFileView")
 
   -- Get file count - FileView returns count when getting string value with no index
   local fileCount = tonumber(fileViewMeasure:GetStringValue()) or 0
