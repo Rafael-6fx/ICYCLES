@@ -55,9 +55,10 @@ function ReadDesktopDirectly(desktopPath)
     return items
   end
 
-  -- FileView plugin: Loop through indices until we get empty result
-  -- GetStringValue() with NO parameter returns PATH, not count!
+  -- FileView plugin: Loop through indices until we get invalid result
+  -- GetStringValue() with NO parameter returns PATH
   -- GetStringValue(index) returns filename at that index (1-based)
+  -- When out of range, it returns the PATH again (not nil/empty!)
   local i = 1
   local maxFiles = 200  -- Safety limit (matches Count setting in ini)
 
@@ -66,9 +67,10 @@ function ReadDesktopDirectly(desktopPath)
   while i <= maxFiles do
     local filename = fileViewMeasure:GetStringValue(i)
 
-    -- Stop when we get nil or empty string (no more files)
-    if not filename or filename == "" then
-      print("Scanner: Reached end of file list at index " .. i)
+    -- CRITICAL: FileView returns the PATH when index is out of range
+    -- Check if result contains backslash or is a path (not just a filename)
+    if not filename or filename == "" or filename:match("\\") or filename:match("^[A-Z]:") then
+      print("Scanner: Reached end of file list at index " .. (i - 1) .. " (got: " .. tostring(filename) .. ")")
       break
     end
 
