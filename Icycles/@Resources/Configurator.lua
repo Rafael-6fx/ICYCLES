@@ -588,6 +588,9 @@ function GetDesktopItemsDisplay()
 
   print("Configurator: Showing page " .. currentPage .. "/" .. totalPages .. " (items " .. startIndex .. "-" .. endIndex .. ")")
 
+  -- Get currently selected item index
+  local selectedItemIndex = tonumber(SKIN:GetVariable("SelectedItemIndex")) or 0
+
   -- Format items for display
   local result = ""
   for i = startIndex, endIndex do
@@ -597,7 +600,14 @@ function GetDesktopItemsDisplay()
     if #displayName > 30 then
       displayName = displayName:sub(1, 27) .. "..."
     end
-    result = result .. displayName
+
+    -- Add visual indicator for selected item
+    if i == selectedItemIndex then
+      result = result .. "► " .. displayName
+    else
+      result = result .. "  " .. displayName
+    end
+
     if i < endIndex then
       result = result .. "\n"
     end
@@ -608,7 +618,7 @@ function GetDesktopItemsDisplay()
     result = result .. "\n\n--- Page " .. currentPage .. " of " .. totalPages .. " ---"
   end
 
-  print("Configurator: Returning " .. #result .. " characters of item list")
+  print("Configurator: Returning " .. #result .. " characters of item list (selected: " .. selectedItemIndex .. ")")
   return result
 end
 
@@ -620,16 +630,26 @@ function GetCategoryListString()
     return "No categories yet\nClick QUICK SETUP to create defaults"
   end
 
+  -- Get currently selected category index
+  local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+
   local result = ""
   for i, categoryName in ipairs(categories) do
     local itemCount = CountItemsInCategory(categoryName)
-    result = result .. categoryName .. " (" .. itemCount .. " items)"
+
+    -- Add visual indicator for selected category
+    if i == selectedIndex then
+      result = result .. "► " .. categoryName .. " (" .. itemCount .. " items)"
+    else
+      result = result .. "  " .. categoryName .. " (" .. itemCount .. " items)"
+    end
+
     if i < #categories then
       result = result .. "\n"
     end
   end
 
-  print("Configurator: Returning category list: " .. result:sub(1, 50))
+  print("Configurator: Returning category list with selection at index " .. selectedIndex)
   return result
 end
 
