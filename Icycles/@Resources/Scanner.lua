@@ -64,8 +64,20 @@ function ReadDesktopDirectly(desktopPath)
 
   print("Scanner: Starting FileView iteration...")
 
+  -- DEBUG: Check what FileView returns at various indices
+  print("Scanner: DEBUG - FileView GetStringValue() with no param: " .. tostring(fileViewMeasure:GetStringValue()))
+  print("Scanner: DEBUG - FileView GetStringValue(0): " .. tostring(fileViewMeasure:GetStringValue(0)))
+  print("Scanner: DEBUG - FileView GetStringValue(1): " .. tostring(fileViewMeasure:GetStringValue(1)))
+  print("Scanner: DEBUG - FileView GetStringValue(2): " .. tostring(fileViewMeasure:GetStringValue(2)))
+  print("Scanner: DEBUG - FileView GetStringValue(3): " .. tostring(fileViewMeasure:GetStringValue(3)))
+
   while i <= maxFiles do
     local filename = fileViewMeasure:GetStringValue(i)
+
+    -- DEBUG: Show what we got at this index
+    if i <= 5 then
+      print("Scanner: DEBUG - Index " .. i .. " returned: '" .. tostring(filename) .. "'")
+    end
 
     -- CRITICAL: FileView returns the PATH when index is out of range
     -- Check if result contains backslash or is a path (not just a filename)
@@ -174,8 +186,20 @@ end
 -- ========================================
 function SaveScannedItems()
   print("Scanner: ===== REBUILD LIST CLICKED =====")
-  print("Scanner: SaveScannedItems() called")
+  print("Scanner: SaveScannedItems() called at " .. os.clock())
 
+  -- DEBUG: Try manually calling FileView Update from Lua
+  local fileViewMeasure = SKIN:GetMeasure("MeasureDesktopFileView")
+  if fileViewMeasure then
+    print("Scanner: DEBUG - Manually calling FileView Update command...")
+    SKIN:Bang('!CommandMeasure', 'MeasureDesktopFileView', 'Update')
+    print("Scanner: DEBUG - Waiting 200ms for FileView to populate...")
+    -- Note: Lua sleep is not available, but we can at least try the bang
+  else
+    print("Scanner: ERROR - Cannot find MeasureDesktopFileView!")
+  end
+
+  print("Scanner: DEBUG - About to call ScanDesktop at " .. os.clock())
   local success, items = pcall(ScanDesktop)
 
   if not success then
