@@ -290,13 +290,14 @@ function StartScan()
   local tempFilePath = skinPath .. "Data\\ScanTemp.txt"
 
   -- Build CMD script to:
-  -- 1. Set UTF8 codepage for unicode output
-  -- 2. Change to Desktop directory
-  -- 3. For each file, output structured data
-  -- 4. For .url files, read content directly (CMD handles unicode paths)
-  -- 5. For .lnk files, output 8.3 short name for Lua binary parsing
+  -- 1. Disable command echo (@echo off prevents prompt/command pollution)
+  -- 2. Set UTF8 codepage for unicode output
+  -- 3. Change to Desktop directory
+  -- 4. For each file, output structured data
+  -- 5. For .url files, read content directly (CMD handles unicode paths)
+  -- 6. For .lnk files, output 8.3 short name for Lua binary parsing
   -- NOTE: Use single % for variables (not %% - that's for batch files only)
-  local cmd = 'chcp 65001 >nul && cd /d "' .. desktopPath .. '" && ('
+  local cmd = '@echo off && chcp 65001 >nul && cd /d "' .. desktopPath .. '" && ('
     .. 'for /f "delims=" %f in (\'dir /b /o:-D\') do ('
     .. 'echo FILE::%f'
     .. ' && for %s in ("%f") do echo SHORT::%~snxs'
