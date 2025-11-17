@@ -360,7 +360,9 @@ function SerializeTable(tbl, indent)
     if type(v) == "table" then
       result = result .. SerializeTable(v, indent .. "  ")
     elseif type(v) == "string" then
-      result = result .. '"' .. v:gsub('"', '\\"') .. '"'
+      -- Escape backslashes FIRST, then double quotes (order matters!)
+      local escaped = v:gsub("\\", "\\\\"):gsub('"', '\\"')
+      result = result .. '"' .. escaped .. '"'
     elseif type(v) == "number" or type(v) == "boolean" then
       result = result .. tostring(v)
     elseif v == nil then
