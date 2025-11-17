@@ -52,27 +52,15 @@ end
 -- PARSE .URL FILE: Extract URL and IconFile
 -- ========================================
 function ParseUrlFile(urlPath)
-  local content = nil
-
-  -- Try direct file open first
+  -- urlPath is the 8.3 short name (ASCII-only), so io.open() will work
   local file = io.open(urlPath, "rb")
-  if file then
-    content = file:read("*a")
-    file:close()
-  else
-    -- Fallback: Use CMD to read file (handles UTF8 paths)
-    print("Scanner: Using CMD fallback to read .url file with unicode name")
-    local handle = io.popen('chcp 65001 >nul && type "' .. urlPath .. '" 2>nul', "r")
-    if handle then
-      content = handle:read("*a")
-      handle:close()
-    end
-  end
-
-  if not content or content == "" then
-    print("Scanner: ERROR - Cannot read .url file: " .. urlPath)
+  if not file then
+    print("Scanner: ERROR - Cannot open .url file: " .. urlPath)
     return nil, nil
   end
+
+  local content = file:read("*a")
+  file:close()
 
   local url = nil
   local iconFile = nil
@@ -110,7 +98,11 @@ function ProcessDesktopFiles(desktopPath, fileList)
 
   print("Scanner: Processing " .. #fileList .. " files from Desktop...")
 
-  for i, filename in ipairs(fileList) do
+  for i, fileEntry in ipairs(fileList) do
+    -- fileEntry has {shortName, longName}
+    local shortName = fileEntry.shortName  -- ASCII-only 8.3 for io.open()
+    local filename = fileEntry.longName    -- UTF8 for display
+
     -- Progress logging
     if i % 50 == 0 or i <= 20 then
       print("Scanner: Processing " .. i .. "/" .. #fileList .. ": " .. filename)
@@ -135,14 +127,16 @@ function ProcessDesktopFiles(desktopPath, fileList)
       end
       itemExt = itemExt:lower()
 
+      -- Use longName for display path, shortName for io.open() operations
       local fullPath = desktopPath .. "\\" .. filename
+      local shortPath = desktopPath .. "\\" .. shortName
 
       -- Base item data
       local item = {
         index = i,
         name = itemName,
         fullName = filename,
-        path = fullPath,
+        path = fullPath,  -- Display path with UTF8
         ext = itemExt
       }
 
@@ -150,13 +144,13 @@ function ProcessDesktopFiles(desktopPath, fileList)
       if itemExt == "lnk" then
         -- .lnk shortcut file
         item.type = "shortcut"
-        item.target = ParseLnkFile(fullPath)
+        item.target = ParseLnkFile(shortPath)  -- Use shortPath for io.open
         item.icon = fullPath  -- Rainmeter can extract icon from .lnk
 
       elseif itemExt == "url" then
         -- .url internet shortcut
         item.type = "url"
-        local url, iconFile = ParseUrlFile(fullPath)
+        local url, iconFile = ParseUrlFile(shortPath)  -- Use shortPath for io.open
         item.target = url
         item.icon = iconFile or fullPath  -- Use iconFile if available
 
@@ -228,12 +222,12 @@ function StartScan()
   pendingDesktopPath = desktopPath
   isScanning = true
 
-  -- Build CMD command to list files sorted by creation date
+  -- Build CMD command to list files with short (8.3) and long names
   -- /b = bare format (filenames only)
-  -- /o:D = order by date (oldest first)
+  -- /x = show 8.3 short names (ASCII-only, for unicode compatibility with io.open)
   -- /o:-D = order by date (newest first)
-  -- /a:-d = files only (not directories) - removed so we get both
-  local cmd = 'dir /b /o:-D "' .. desktopPath .. '"'
+  -- Format: "SHORTN~1.EXT longfilename.ext" or just "filename.ext" if no short name
+  local cmd = 'dir /b /x /o:-D "' .. desktopPath .. '"'
 
   print("Scanner: Running CMD: " .. cmd)
 
@@ -270,11 +264,23 @@ function ParseScanOutput()
   local output = measure:GetStringValue()
   print("Scanner: Got CMD output (" .. string.len(output) .. " bytes)")
 
-  -- Parse output into file list (one filename per line)
+  -- Parse output into file list with both short (8.3) and long names
+  -- Format with /b /x: "SHORTN~1.EXT longfilename.ext" or just "filename.ext"
   local fileList = {}
-  for filename in output:gmatch("[^\r\n]+") do
-    if filename ~= "" then
-      table.insert(fileList, filename)
+  for line in output:gmatch("[^\r\n]+") do
+    if line ~= "" then
+      -- Try to parse as "shortname longname" format
+      local shortName, longName = line:match("^(%S+)%s+(.+)$")
+      if not shortName then
+        -- No spaces = no short name, use as-is for both
+        shortName = line
+        longName = line
+      end
+
+      table.insert(fileList, {
+        shortName = shortName,  -- ASCII-only 8.3 name for io.open()
+        longName = longName     -- Full UTF8 name for display
+      })
     end
   end
 
