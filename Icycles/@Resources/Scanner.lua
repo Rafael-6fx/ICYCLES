@@ -49,28 +49,93 @@ function ParseLnkFile(lnkPath)
 end
 
 -- ========================================
--- PARSE .URL FILE: Extract URL and IconFile
+-- PROCESS FILE ENTRY: Convert parsed temp file entry to item
 -- ========================================
-function ParseUrlFile(urlPath)
-  -- urlPath is the 8.3 short name (ASCII-only), so io.open() will work
-  local file = io.open(urlPath, "rb")
-  if not file then
-    print("Scanner: ERROR - Cannot open .url file: " .. urlPath)
-    return nil, nil
+function ProcessFileEntry(fileEntry, desktopPath)
+  local filename = fileEntry.filename
+  local shortName = fileEntry.shortName
+  local ext = (fileEntry.ext or ""):lower()
+  local fileType = fileEntry.type
+
+  -- Skip system files (case-insensitive)
+  local filenameLower = filename:lower()
+  local isSystemFile =
+    filenameLower:match("^desktop%.ini$") or
+    filenameLower:match("^thumbs%.db$") or
+    filenameLower:match("%.tmp$") or
+    filenameLower:match("^%.") or
+    filenameLower:match("^~%$") or
+    filenameLower:match("^~.*%.tmp$")
+
+  if isSystemFile then
+    return nil  -- Skip this file
   end
 
-  local content = file:read("*a")
-  file:close()
+  -- Parse filename to get name without extension
+  local itemName = filename
+  if ext ~= "" then
+    itemName = filename:match("^(.+)%." .. ext .. "$") or filename
+  end
+
+  -- Build paths
+  local fullPath = desktopPath .. "\\" .. filename  -- Display path with UTF8
+  local shortPath = desktopPath .. "\\" .. shortName  -- ASCII path for io.open()
+
+  -- Base item data
+  local item = {
+    name = itemName,
+    fullName = filename,
+    path = fullPath,
+    ext = ext,
+    type = fileType
+  }
+
+  -- Process based on type
+  if fileType == "url" then
+    -- Extract URL from content
+    local url, iconFile = ExtractUrlFromContent(fileEntry.urlContent)
+    item.target = url
+    item.icon = iconFile or fullPath
+
+  elseif fileType == "lnk" then
+    -- Parse .lnk binary file using short path
+    item.target = ParseLnkFile(shortPath)
+    item.icon = fullPath  -- Rainmeter extracts icon from .lnk
+
+  elseif fileType == "exe" then
+    item.target = fullPath
+    item.icon = fullPath  -- .exe contains its own icon
+
+  elseif fileType == "folder" then
+    item.target = fullPath
+    item.icon = nil  -- Folder icon handled by Rainmeter
+
+  else
+    -- Regular file
+    item.type = "file"
+    item.target = fullPath
+    item.icon = fullPath
+  end
+
+  return item
+end
+
+-- ========================================
+-- EXTRACT URL FROM CONTENT: Parse .url file content
+-- ========================================
+function ExtractUrlFromContent(content)
+  if not content or content == "" then
+    return nil, nil
+  end
 
   local url = nil
   local iconFile = nil
 
-  -- Parse line by line from content
   for line in content:gmatch("[^\r\n]+") do
     if not url then
       local match = line:match("URL=(.+)")
       if match then
-        url = match:gsub("%s+$", "") -- Trim trailing whitespace
+        url = match:gsub("%s+$", "")  -- Trim trailing whitespace
       end
     end
 
@@ -81,7 +146,6 @@ function ParseUrlFile(urlPath)
       end
     end
 
-    -- Stop if we found both
     if url and iconFile then
       break
     end
@@ -91,7 +155,7 @@ function ParseUrlFile(urlPath)
 end
 
 -- ========================================
--- PROCESS DESKTOP FILES: Parse file list and extract metadata
+-- PROCESS DESKTOP FILES: Parse file list and extract metadata (DEPRECATED)
 -- ========================================
 function ProcessDesktopFiles(desktopPath, fileList)
   local items = {}
@@ -222,14 +286,35 @@ function StartScan()
   pendingDesktopPath = desktopPath
   isScanning = true
 
-  -- Build CMD command to list files with short (8.3) and long names
-  -- /b = bare format (filenames only)
-  -- /x = show 8.3 short names (ASCII-only, for unicode compatibility with io.open)
-  -- /o:-D = order by date (newest first)
-  -- Format: "SHORTN~1.EXT longfilename.ext" or just "filename.ext" if no short name
-  local cmd = 'dir /b /x /o:-D "' .. desktopPath .. '"'
+  -- Build temp file path
+  local tempFilePath = skinPath .. "Data\\ScanTemp.txt"
 
-  print("Scanner: Running CMD: " .. cmd)
+  -- Build CMD script to:
+  -- 1. Set UTF8 codepage for unicode output
+  -- 2. Change to Desktop directory
+  -- 3. For each file, output structured data
+  -- 4. For .url files, read content directly (CMD handles unicode paths)
+  -- 5. For .lnk files, output 8.3 short name for Lua binary parsing
+  local cmd = 'chcp 65001 >nul && cd /d "' .. desktopPath .. '" && ('
+    .. 'for /f "delims=" %%f in (\'dir /b /o:-D\') do ('
+    .. 'echo FILE::%%f'
+    .. ' && for %%s in ("%%f") do echo SHORT::%%~snxs'
+    .. ' && echo EXT::%%~xf'
+    .. ' && if /i "%%~xf"==".url" ('
+    .. 'echo TYPE::url'
+    .. ' && echo URLCONTENT::'
+    .. ' && type "%%f"'
+    .. ' && echo ::URLCONTENT'
+    .. ')'
+    .. ' && if /i "%%~xf"==".lnk" echo TYPE::lnk'
+    .. ' && if /i "%%~xf"==".exe" echo TYPE::exe'
+    .. ' && if "%%~xf"=="" echo TYPE::folder'
+    .. ' && echo ::FILE'
+    .. ')'
+    .. ') > "' .. tempFilePath .. '"'
+
+  print("Scanner: Running CMD to generate temp file...")
+  print("Scanner: Output: " .. tempFilePath)
 
   -- Enable and configure RunCommand measure
   -- Set the ScanCommand variable (used by Parameter=#ScanCommand# with DynamicVariables=1)
@@ -253,51 +338,84 @@ function ParseScanOutput()
     return false
   end
 
-  -- Get CMD output from RunCommand measure
-  local measure = SKIN:GetMeasure("MeasureDesktopScan")
-  if not measure then
-    print("Scanner: ERROR - Cannot find MeasureDesktopScan")
+  -- Read temp file generated by CMD
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local tempFilePath = skinPath .. "Data\\ScanTemp.txt"
+
+  local tempFile = io.open(tempFilePath, "rb")  -- Binary mode for UTF8
+  if not tempFile then
+    print("Scanner: ERROR - Cannot open temp file: " .. tempFilePath)
     isScanning = false
     return false
   end
 
-  local output = measure:GetStringValue()
-  print("Scanner: Got CMD output (" .. string.len(output) .. " bytes)")
+  local content = tempFile:read("*a")
+  tempFile:close()
 
-  -- Parse output into file list with both short (8.3) and long names
-  -- Format with /b /x: "SHORTN~1.EXT longfilename.ext" or just "filename.ext"
-  local fileList = {}
-  for line in output:gmatch("[^\r\n]+") do
-    if line ~= "" then
-      local shortName, longName
+  print("Scanner: Read temp file (" .. string.len(content) .. " bytes)")
 
-      -- Check if line contains a short name (indicated by ~ character)
-      if line:find("~") then
-        -- Has short name: "SHORTN~1.EXT longfilename.ext"
-        -- Short name is always first, separated by space from long name
-        shortName, longName = line:match("^(%S+)%s+(.+)$")
-        if not shortName then
-          -- Fallback if pattern fails
-          shortName = line
-          longName = line
-        end
-      else
-        -- No short name: filename is already 8.3 compatible
-        shortName = line
-        longName = line
+  -- Parse structured format into items
+  local items = {}
+  local currentFile = nil
+
+  for line in content:gmatch("[^\r\n]+") do
+    if line:match("^FILE::") then
+      -- Start new file entry
+      currentFile = {
+        filename = line:sub(7),  -- Everything after "FILE::"
+        shortName = nil,
+        ext = nil,
+        type = nil,
+        urlContent = nil
+      }
+
+    elseif line:match("^SHORT::") and currentFile then
+      currentFile.shortName = line:sub(8)
+
+    elseif line:match("^EXT::") and currentFile then
+      currentFile.ext = line:sub(6)
+
+    elseif line:match("^TYPE::") and currentFile then
+      currentFile.type = line:sub(7)
+
+    elseif line:match("^URLCONTENT::") and currentFile then
+      -- Start collecting URL content
+      currentFile.urlContent = ""
+
+    elseif line:match("^::URLCONTENT") and currentFile then
+      -- End of URL content (already collected)
+
+    elseif line:match("^::FILE") and currentFile then
+      -- End of file entry, process it
+      local item = ProcessFileEntry(currentFile, pendingDesktopPath)
+      if item then  -- Skip nil (system files)
+        table.insert(items, item)
       end
+      currentFile = nil
 
-      table.insert(fileList, {
-        shortName = shortName,  -- ASCII-only 8.3 name for io.open()
-        longName = longName     -- Full UTF8 name for display
-      })
+    elseif currentFile and currentFile.urlContent ~= nil then
+      -- Collecting URL content lines
+      if currentFile.urlContent == "" then
+        currentFile.urlContent = line
+      else
+        currentFile.urlContent = currentFile.urlContent .. "\n" .. line
+      end
     end
   end
 
-  print("Scanner: Found " .. #fileList .. " files in output")
+  print("Scanner: Parsed " .. #items .. " file entries from temp file")
 
-  -- Process files to extract metadata
-  local items = ProcessDesktopFiles(pendingDesktopPath, fileList)
+  -- Sort items alphabetically by name
+  table.sort(items, function(a, b)
+    return a.name:lower() < b.name:lower()
+  end)
+
+  -- Renumber indices after sorting
+  for i, item in ipairs(items) do
+    item.index = i
+  end
+
+  print("Scanner: Sorted and indexed " .. #items .. " items")
 
   -- Wrap items in proper data structure with metadata
   local dataStructure = {
