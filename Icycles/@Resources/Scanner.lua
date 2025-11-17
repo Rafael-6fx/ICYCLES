@@ -70,11 +70,22 @@ function ReadDesktopDirectly(desktopPath)
 
   print("Scanner: Starting FileView iteration...")
 
+  -- Helper function: Check if string is a path (not a filename)
+  -- FileView returns the full PATH when out of range
+  local function IsPath(str)
+    if not str or str == "" then
+      return true
+    end
+    -- Paths contain colons (C:\...) or backslashes (\\server\... or end with \)
+    -- Valid Windows filenames CANNOT contain \ or : so this is safe
+    return str:find(":") ~= nil or str:find("\\") ~= nil
+  end
+
   -- First pass: count total files to scan
   local totalFiles = 0
   for idx = 1, maxFiles do
     local testFile = fileViewMeasure:GetStringValue(idx)
-    if not testFile or testFile == "" or testFile:match("\\") or testFile:match("^[A-Z]:") then
+    if IsPath(testFile) then
       break
     end
     totalFiles = totalFiles + 1
@@ -87,8 +98,8 @@ function ReadDesktopDirectly(desktopPath)
     local filename = fileViewMeasure:GetStringValue(i)
 
     -- CRITICAL: FileView returns the PATH when index is out of range
-    -- Check if result contains backslash or is a path (not just a filename)
-    if not filename or filename == "" or filename:match("\\") or filename:match("^[A-Z]:") then
+    -- Paths contain : or \ which are invalid in Windows filenames
+    if IsPath(filename) then
       break
     end
 
