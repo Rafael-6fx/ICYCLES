@@ -221,8 +221,10 @@ function StartScan()
   print("Scanner: Running CMD: " .. cmd)
 
   -- Enable and configure RunCommand measure
+  -- Set the ScanCommand variable (used by Parameter=#ScanCommand# with DynamicVariables=1)
+  SKIN:Bang('!SetVariable', 'ScanCommand', '/c ' .. cmd)
   SKIN:Bang('!EnableMeasure', 'MeasureDesktopScan')
-  SKIN:Bang('!SetOption', 'MeasureDesktopScan', 'Parameter', '/c ' .. cmd)
+  SKIN:Bang('!UpdateMeasure', 'MeasureDesktopScan')
   SKIN:Bang('!CommandMeasure', 'MeasureDesktopScan', 'Run')
 
   print("Scanner: CMD scan initiated, waiting for FinishAction callback...")
