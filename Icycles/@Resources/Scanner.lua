@@ -269,10 +269,20 @@ function ParseScanOutput()
   local fileList = {}
   for line in output:gmatch("[^\r\n]+") do
     if line ~= "" then
-      -- Try to parse as "shortname longname" format
-      local shortName, longName = line:match("^(%S+)%s+(.+)$")
-      if not shortName then
-        -- No spaces = no short name, use as-is for both
+      local shortName, longName
+
+      -- Check if line contains a short name (indicated by ~ character)
+      if line:find("~") then
+        -- Has short name: "SHORTN~1.EXT longfilename.ext"
+        -- Short name is always first, separated by space from long name
+        shortName, longName = line:match("^(%S+)%s+(.+)$")
+        if not shortName then
+          -- Fallback if pattern fails
+          shortName = line
+          longName = line
+        end
+      else
+        -- No short name: filename is already 8.3 compatible
         shortName = line
         longName = line
       end
