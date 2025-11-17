@@ -3,11 +3,17 @@
 -- ========================================
 -- Scans Desktop directory for items
 -- Outputs to Data/ListedDesktopItems.ldb
--- NOTE: Uses RunCommand measure from Icycles.ini to enumerate files
+-- Uses FileView plugin controlled by this script
 -- ========================================
+
+-- Internal state
+local isScanning = false
+local pendingDesktopPath = ""
 
 function Initialize()
   -- Called on skin load
+  isScanning = false
+  pendingDesktopPath = ""
 end
 
 function Update()
@@ -182,28 +188,70 @@ function ResolveURLFile(urlPath)
 end
 
 -- ========================================
--- SAVE FUNCTION: Write items to file
+-- START SCAN: Initiate FileView scan
 -- ========================================
-function SaveScannedItems()
-  print("Scanner: ===== REBUILD LIST CLICKED =====")
-  print("Scanner: SaveScannedItems() called at " .. os.clock())
+function StartScan()
+  print("Scanner: ===== START SCAN REQUESTED =====")
 
-  -- DEBUG: Try manually calling FileView Update from Lua
-  local fileViewMeasure = SKIN:GetMeasure("MeasureDesktopFileView")
-  if fileViewMeasure then
-    print("Scanner: DEBUG - Manually calling FileView Update command...")
-    SKIN:Bang('!CommandMeasure', 'MeasureDesktopFileView', 'Update')
-    print("Scanner: DEBUG - Waiting 200ms for FileView to populate...")
-    -- Note: Lua sleep is not available, but we can at least try the bang
-  else
-    print("Scanner: ERROR - Cannot find MeasureDesktopFileView!")
+  if isScanning then
+    print("Scanner: WARNING - Already scanning, ignoring request")
+    return false
   end
 
-  print("Scanner: DEBUG - About to call ScanDesktop at " .. os.clock())
-  local success, items = pcall(ScanDesktop)
+  -- Load Desktop path from UserDesktopData
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local userDataPath = skinPath .. "Data\\UserDesktopData.ldb"
+
+  print("Scanner: Loading desktop path from " .. userDataPath)
+  local userData = LoadDataFile(userDataPath)
+
+  if not userData or not userData.desktopPath or userData.desktopPath == "" then
+    print("Scanner: ERROR - Cannot load Desktop path from UserDesktopData.ldb")
+    print("Scanner: userData = " .. tostring(userData))
+    if userData then
+      print("Scanner: userData.desktopPath = " .. tostring(userData.desktopPath))
+    end
+    return false
+  end
+
+  local desktopPath = userData.desktopPath
+  print("Scanner: Desktop path from file: " .. desktopPath)
+
+  -- Store path for FinishScan to use
+  pendingDesktopPath = desktopPath
+  isScanning = true
+
+  -- Set FileView's Path to the correct desktop path
+  print("Scanner: Setting FileView Path to: " .. desktopPath)
+  SKIN:Bang('!SetOption', 'MeasureDesktopFileView', 'Path', desktopPath)
+
+  -- Trigger FileView to scan
+  print("Scanner: Calling FileView Update command...")
+  SKIN:Bang('!CommandMeasure', 'MeasureDesktopFileView', 'Update')
+
+  print("Scanner: FileView scan initiated, waiting for FinishAction callback...")
+  return true
+end
+
+-- ========================================
+-- FINISH SCAN: Process FileView results
+-- ========================================
+function FinishScan()
+  print("Scanner: ===== FINISH SCAN CALLBACK =====")
+
+  if not isScanning then
+    print("Scanner: WARNING - FinishScan called but not scanning (probably skin init)")
+    return false
+  end
+
+  print("Scanner: Processing FileView results...")
+  local success, items = pcall(ReadDesktopDirectly, pendingDesktopPath)
 
   if not success then
     LogError("Failed to scan Desktop: " .. tostring(items))
+    isScanning = false
+    pendingDesktopPath = ""
+    print("Scanner: ERROR - Scan failed, state reset")
     return false
   end
 
@@ -255,6 +303,11 @@ function SaveScannedItems()
   end
 
   print("Scanner: Saved " .. #items .. " items successfully")
+
+  -- Reset state flags
+  isScanning = false
+  pendingDesktopPath = ""
+  print("Scanner: Scan complete, state reset")
 
   -- Trigger UI update to refresh Desktop items display (target specific meter)
   SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
