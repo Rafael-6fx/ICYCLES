@@ -97,11 +97,17 @@ function ReadDesktopDirectly(desktopPath)
       print("Scanner: Processing " .. i .. "/" .. totalFiles .. ": " .. filename)
     end
 
-    -- Skip system files
-    if not filename:match("^desktop%.ini$") and
-       not filename:match("^Thumbs%.db$") and
-       not filename:match("%.tmp$") then
+    -- Skip system files (case-insensitive)
+    local filenameLower = filename:lower()
+    local isSystemFile =
+      filenameLower:match("^desktop%.ini$") or
+      filenameLower:match("^thumbs%.db$") or
+      filenameLower:match("%.tmp$") or
+      filenameLower:match("^%.") or  -- Hidden files starting with .
+      filenameLower:match("^~%$") or -- Temporary Office files
+      filenameLower:match("^~.*%.tmp$")  -- Word temp files
 
+    if not isSystemFile then
       local fullPath = desktopPath .. "\\" .. filename
       local itemData = ExtractItemData(fullPath, filename)
 
