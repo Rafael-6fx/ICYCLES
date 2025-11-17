@@ -70,29 +70,32 @@ function ReadDesktopDirectly(desktopPath)
 
   print("Scanner: Starting FileView iteration...")
 
-  -- DEBUG: Check what FileView returns at various indices
-  print("Scanner: DEBUG - FileView GetStringValue() with no param: " .. tostring(fileViewMeasure:GetStringValue()))
-  print("Scanner: DEBUG - FileView GetStringValue(0): " .. tostring(fileViewMeasure:GetStringValue(0)))
-  print("Scanner: DEBUG - FileView GetStringValue(1): " .. tostring(fileViewMeasure:GetStringValue(1)))
-  print("Scanner: DEBUG - FileView GetStringValue(2): " .. tostring(fileViewMeasure:GetStringValue(2)))
-  print("Scanner: DEBUG - FileView GetStringValue(3): " .. tostring(fileViewMeasure:GetStringValue(3)))
+  -- First pass: count total files to scan
+  local totalFiles = 0
+  for idx = 1, maxFiles do
+    local testFile = fileViewMeasure:GetStringValue(idx)
+    if not testFile or testFile == "" or testFile:match("\\") or testFile:match("^[A-Z]:") then
+      break
+    end
+    totalFiles = totalFiles + 1
+  end
 
+  print("Scanner: Found " .. totalFiles .. " files to process")
+
+  -- Second pass: process files with progress counter
   while i <= maxFiles do
     local filename = fileViewMeasure:GetStringValue(i)
-
-    -- DEBUG: Show what we got at this index
-    if i <= 5 then
-      print("Scanner: DEBUG - Index " .. i .. " returned: '" .. tostring(filename) .. "'")
-    end
 
     -- CRITICAL: FileView returns the PATH when index is out of range
     -- Check if result contains backslash or is a path (not just a filename)
     if not filename or filename == "" or filename:match("\\") or filename:match("^[A-Z]:") then
-      print("Scanner: Reached end of file list at index " .. (i - 1) .. " (got: " .. tostring(filename) .. ")")
       break
     end
 
-    print("Scanner: Processing item " .. i .. ": " .. filename)
+    -- Show progress counter every item or every 5 items for large lists
+    if totalFiles <= 20 or i % 5 == 0 or i == totalFiles then
+      print("Scanner: Processing " .. i .. "/" .. totalFiles .. ": " .. filename)
+    end
 
     -- Skip system files
     if not filename:match("^desktop%.ini$") and
@@ -104,16 +107,13 @@ function ReadDesktopDirectly(desktopPath)
 
       if itemData then
         table.insert(items, itemData)
-        print("Scanner: Added item: " .. itemData.name)
       end
-    else
-      print("Scanner: Skipped system file: " .. filename)
     end
 
     i = i + 1
   end
 
-  print("Scanner: FileView iteration complete - found " .. #items .. " items")
+  print("Scanner: Scan complete - added " .. #items .. "/" .. totalFiles .. " items (skipped " .. (totalFiles - #items) .. " system files)")
 
   -- Sort alphabetically by name
   table.sort(items, function(a, b)
@@ -248,7 +248,7 @@ function FinishScan()
     return false
   end
 
-  print("Scanner: Processing FileView results...")
+  print("Scanner: Processing FileView results from: " .. pendingDesktopPath)
   local success, items = pcall(ReadDesktopDirectly, pendingDesktopPath)
 
   if not success then
