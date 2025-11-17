@@ -52,16 +52,33 @@ end
 -- PARSE .URL FILE: Extract URL and IconFile
 -- ========================================
 function ParseUrlFile(urlPath)
-  local file = io.open(urlPath, "r")
-  if not file then
-    print("Scanner: ERROR - Cannot open .url file: " .. urlPath)
+  local content = nil
+
+  -- Try direct file open first
+  local file = io.open(urlPath, "rb")
+  if file then
+    content = file:read("*a")
+    file:close()
+  else
+    -- Fallback: Use CMD to read file (handles UTF8 paths)
+    print("Scanner: Using CMD fallback to read .url file with unicode name")
+    local handle = io.popen('chcp 65001 >nul && type "' .. urlPath .. '" 2>nul', "r")
+    if handle then
+      content = handle:read("*a")
+      handle:close()
+    end
+  end
+
+  if not content or content == "" then
+    print("Scanner: ERROR - Cannot read .url file: " .. urlPath)
     return nil, nil
   end
 
   local url = nil
   local iconFile = nil
 
-  for line in file:lines() do
+  -- Parse line by line from content
+  for line in content:gmatch("[^\r\n]+") do
     if not url then
       local match = line:match("URL=(.+)")
       if match then
@@ -82,7 +99,6 @@ function ParseUrlFile(urlPath)
     end
   end
 
-  file:close()
   return url, iconFile
 end
 
@@ -287,7 +303,7 @@ function ParseScanOutput()
   -- Write to temp file first (atomic write)
   local tempPath = filePath .. ".tmp"
   local writeSuccess, err = pcall(function()
-    local file = io.open(tempPath, "w")
+    local file = io.open(tempPath, "wb")  -- Binary mode to preserve UTF8
     if not file then
       error("Cannot open file for writing: " .. tempPath)
     end
