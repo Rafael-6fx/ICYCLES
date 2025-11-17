@@ -246,6 +246,10 @@ function StartScan()
   pendingDesktopPath = desktopPath
   isScanning = true
 
+  -- Enable the parent measure (starts disabled to prevent init scan)
+  print("Scanner: Enabling FileView parent measure...")
+  SKIN:Bang('!EnableMeasure', 'MeasureDesktopFileView')
+
   -- Set FileView's Path to the correct desktop path
   print("Scanner: Setting FileView Path to: " .. desktopPath)
   SKIN:Bang('!SetOption', 'MeasureDesktopFileView', 'Path', desktopPath)
@@ -337,6 +341,10 @@ function FinishScan()
   isScanning = false
   pendingDesktopPath = ""
   print("Scanner: Scan complete, state reset")
+
+  -- Disable FileView parent to prevent accidental rescans
+  print("Scanner: Disabling FileView parent measure...")
+  SKIN:Bang('!DisableMeasure', 'MeasureDesktopFileView')
 
   -- Trigger UI update to refresh Desktop items display (target specific meter)
   SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
