@@ -366,11 +366,20 @@ function ParseScanOutput()
 
   print("Scanner: Read temp file (" .. string.len(content) .. " bytes)")
 
+  -- Debug: Show first 500 chars
+  local preview = content:sub(1, 500)
+  print("Scanner: File preview: " .. preview)
+
   -- Parse structured format into items
   local items = {}
   local currentFile = nil
+  local lineCount = 0
 
   for line in content:gmatch("[^\r\n]+") do
+    lineCount = lineCount + 1
+    if lineCount <= 10 then
+      print("Scanner: Line " .. lineCount .. ": " .. line)
+    end
     if line:match("^FILE::") then
       -- Start new file entry
       currentFile = {
@@ -415,6 +424,7 @@ function ParseScanOutput()
     end
   end
 
+  print("Scanner: Total lines read: " .. lineCount)
   print("Scanner: Parsed " .. #items .. " file entries from temp file")
 
   -- Sort items alphabetically by name
