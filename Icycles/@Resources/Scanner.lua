@@ -225,6 +225,10 @@ function StartScan()
   print("Scanner: Setting FileView Path to: " .. desktopPath)
   SKIN:Bang('!SetOption', 'MeasureDesktopFileView', 'Path', desktopPath)
 
+  -- Update the measure to apply the new Path option
+  print("Scanner: Applying Path change with UpdateMeasure...")
+  SKIN:Bang('!UpdateMeasure', 'MeasureDesktopFileView')
+
   -- Trigger FileView to scan
   print("Scanner: Calling FileView Update command...")
   SKIN:Bang('!CommandMeasure', 'MeasureDesktopFileView', 'Update')
