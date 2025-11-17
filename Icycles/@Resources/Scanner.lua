@@ -47,90 +47,98 @@ function ScanDesktop()
 end
 
 -- ========================================
--- READ DESKTOP DIRECTLY: Use FileView measure
+-- READ DESKTOP DIRECTLY: Read FileView children
 -- ========================================
 function ReadDesktopDirectly(desktopPath)
   local items = {}
+  local maxFiles = 9999  -- Matches Count and children count
+  local consecutiveEmpties = 0
 
-  print("Scanner: Reading Desktop files directly via FileView")
-
-  -- Get the FileView measure (should already be updated by button action)
-  local fileViewMeasure = SKIN:GetMeasure("MeasureDesktopFileView")
-  if not fileViewMeasure then
-    LogError("Cannot find MeasureDesktopFileView - FileView plugin not loaded")
-    return items
-  end
-
-  -- FileView plugin: Loop through indices until we get invalid result
-  -- GetStringValue() with NO parameter returns PATH
-  -- GetStringValue(index) returns filename at that index (1-based)
-  -- When out of range, it returns the PATH again (not nil/empty!)
-  local i = 1
-  local maxFiles = 200  -- Safety limit (matches Count setting in ini)
-
-  print("Scanner: Starting FileView iteration...")
+  print("Scanner: Reading from FileView children (max " .. maxFiles .. ")...")
 
   -- Helper function: Check if string is a path (not a filename)
-  -- FileView returns the full PATH when out of range
   local function IsPath(str)
     if not str or str == "" then
       return true
     end
-    -- Paths contain colons (C:\...) or backslashes (\\server\... or end with \)
-    -- Valid Windows filenames CANNOT contain \ or : so this is safe
+    -- Paths contain : or \ which are invalid in Windows filenames
     return str:find(":") ~= nil or str:find("\\") ~= nil
   end
 
-  -- First pass: count total files to scan
-  local totalFiles = 0
-  for idx = 1, maxFiles do
-    local testFile = fileViewMeasure:GetStringValue(idx)
-    if IsPath(testFile) then
+  -- Read from all 5 child measure types simultaneously
+  for i = 1, maxFiles do
+    -- Get child measures for this index
+    local childName = SKIN:GetMeasure("MeasureFileViewChild_FileName" .. i)
+    local childSize = SKIN:GetMeasure("MeasureFileViewChild_FileSize" .. i)
+    local childDate = SKIN:GetMeasure("MeasureFileViewChild_FileDate" .. i)
+    local childPath = SKIN:GetMeasure("MeasureFileViewChild_FilePath" .. i)
+    local childType = SKIN:GetMeasure("MeasureFileViewChild_FileType" .. i)
+
+    if not childName then
+      print("Scanner: ERROR - Cannot find child measure at index " .. i)
       break
     end
-    totalFiles = totalFiles + 1
-  end
 
-  print("Scanner: Found " .. totalFiles .. " files to process")
+    -- Read values from children
+    local filename = childName:GetStringValue()
+    local filesize = childSize:GetStringValue()
+    local filedate = childDate:GetStringValue()
+    local filepath = childPath:GetStringValue()
+    local filetype = childType:GetStringValue()
 
-  -- Second pass: process files with progress counter
-  while i <= maxFiles do
-    local filename = fileViewMeasure:GetStringValue(i)
-
-    -- CRITICAL: FileView returns the PATH when index is out of range
-    -- Paths contain : or \ which are invalid in Windows filenames
+    -- Check if we hit PATH (end of files) or empty
     if IsPath(filename) then
-      break
-    end
+      consecutiveEmpties = consecutiveEmpties + 1
+      if consecutiveEmpties >= 2 then
+        -- Stop at 2 consecutive empties, DON'T include them
+        print("Scanner: Reached end at index " .. (i - 2) .. " (2 consecutive empties detected)")
+        break
+      end
+    else
+      -- Valid filename - reset empty counter
+      consecutiveEmpties = 0
 
-    -- Show progress counter every item or every 5 items for large lists
-    if totalFiles <= 20 or i % 5 == 0 or i == totalFiles then
-      print("Scanner: Processing " .. i .. "/" .. totalFiles .. ": " .. filename)
-    end
+      -- Progress logging
+      if i % 100 == 0 or i <= 20 then
+        print("Scanner: Processing " .. i .. ": " .. filename)
+      end
 
-    -- Skip system files (case-insensitive)
-    local filenameLower = filename:lower()
-    local isSystemFile =
-      filenameLower:match("^desktop%.ini$") or
-      filenameLower:match("^thumbs%.db$") or
-      filenameLower:match("%.tmp$") or
-      filenameLower:match("^%.") or  -- Hidden files starting with .
-      filenameLower:match("^~%$") or -- Temporary Office files
-      filenameLower:match("^~.*%.tmp$")  -- Word temp files
+      -- Skip system files (case-insensitive)
+      local filenameLower = filename:lower()
+      local isSystemFile =
+        filenameLower:match("^desktop%.ini$") or
+        filenameLower:match("^thumbs%.db$") or
+        filenameLower:match("%.tmp$") or
+        filenameLower:match("^%.") or
+        filenameLower:match("^~%$") or
+        filenameLower:match("^~.*%.tmp$")
 
-    if not isSystemFile then
-      local fullPath = desktopPath .. "\\" .. filename
-      local itemData = ExtractItemData(fullPath, filename)
+      if not isSystemFile then
+        -- Combine all data into item
+        local item = {
+          name = filename,
+          size = tonumber(filesize) or 0,
+          date = filedate,
+          path = filepath,
+          type = filetype,
+          ext = filetype:lower()
+        }
 
-      if itemData then
-        table.insert(items, itemData)
+        -- Determine item type
+        if item.ext == "lnk" then
+          item.type = "shortcut"
+        elseif item.ext == "" then
+          item.type = "folder"
+        else
+          item.type = "file"
+        end
+
+        table.insert(items, item)
       end
     end
-
-    i = i + 1
   end
 
-  print("Scanner: Scan complete - added " .. #items .. "/" .. totalFiles .. " items (skipped " .. (totalFiles - #items) .. " system files)")
+  print("Scanner: Scan complete - found " .. #items .. " items")
 
   -- Sort alphabetically by name
   table.sort(items, function(a, b)
