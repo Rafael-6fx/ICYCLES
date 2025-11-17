@@ -35,10 +35,11 @@ function ParseLnkFile(lnkPath)
 
   -- Look for paths in binary data (ASCII strings)
   -- Paths contain ":\" (C:\...) or "\\" (network paths)
-  for path in content:gmatch("([A-Za-z]:[^\0]+)") do
-    -- Clean up: remove null bytes and trailing garbage
-    path = path:match("([^\0]+)")
-    if path and (path:match("%.exe") or path:match("%.lnk") or path:match("%.") or path:match("\\[^\\]+$")) then
+  -- Match path-like strings: drive letter + valid path characters until null/garbage
+  for path in content:gmatch("([A-Za-z]:[%w%s\\%.%-%_%(%)]+)") do
+    -- Trim trailing garbage (non-printable or weird chars)
+    path = path:gsub("[^%w%s\\%.%-%_%(%)]+$", "")
+    if path and (path:match("%.exe$") or path:match("%.lnk$") or path:match("%.url$") or path:match("\\[^\\]+$")) then
       -- Found a likely target path
       return path
     end
