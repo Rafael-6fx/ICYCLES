@@ -15,7 +15,8 @@ types = [
     ("FileSize", "File size in bytes"),
     ("FileDate", "File modification date"),
     ("FilePath", "Full file path"),
-    ("FileType", "File extension/type")
+    ("FileType", "File extension/type"),
+    ("Icon", "File icon")
 ]
 
 # Ensure output directory exists

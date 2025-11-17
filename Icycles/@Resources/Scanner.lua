@@ -54,6 +54,10 @@ function ReadDesktopDirectly(desktopPath)
   local maxFiles = 9999  -- Matches Count and children count
   local consecutiveEmpties = 0
 
+  -- Ensure output directories exist
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  EnsureDirectoriesExist(skinPath)
+
   print("Scanner: Reading from FileView children (max " .. maxFiles .. ")...")
 
   -- Helper function: Check if string is a path (not a filename)
@@ -65,7 +69,7 @@ function ReadDesktopDirectly(desktopPath)
     return str:find(":") ~= nil or str:find("\\") ~= nil
   end
 
-  -- Read from all 5 child measure types simultaneously
+  -- Read from all 6 child measure types simultaneously
   for i = 1, maxFiles do
     -- Get child measures for this index
     local childName = SKIN:GetMeasure("MeasureFileViewChild_FileName" .. i)
@@ -73,6 +77,7 @@ function ReadDesktopDirectly(desktopPath)
     local childDate = SKIN:GetMeasure("MeasureFileViewChild_FileDate" .. i)
     local childPath = SKIN:GetMeasure("MeasureFileViewChild_FilePath" .. i)
     local childType = SKIN:GetMeasure("MeasureFileViewChild_FileType" .. i)
+    local childIcon = SKIN:GetMeasure("MeasureFileViewChild_Icon" .. i)
 
     if not childName then
       print("Scanner: ERROR - Cannot find child measure at index " .. i)
@@ -85,6 +90,7 @@ function ReadDesktopDirectly(desktopPath)
     local filedate = childDate:GetStringValue()
     local filepath = childPath:GetStringValue()
     local filetype = childType:GetStringValue()
+    local iconpath = childIcon:GetStringValue()
 
     -- Check if we hit PATH (end of files) or empty
     if IsPath(filename) then
@@ -114,23 +120,67 @@ function ReadDesktopDirectly(desktopPath)
         filenameLower:match("^~.*%.tmp$")
 
       if not isSystemFile then
-        -- Combine all data into item
+        -- Parse filename to get name and extension
+        local itemName, itemExt = filename:match("^(.+)%.([^%.]+)$")
+        if not itemName then
+          itemName = filename
+          itemExt = ""
+        end
+        itemExt = itemExt:lower()
+
+        -- Base item data
         local item = {
-          name = filename,
+          name = itemName,
+          fullName = filename,
           size = tonumber(filesize) or 0,
           date = filedate,
           path = filepath,
-          type = filetype,
-          ext = filetype:lower()
+          ext = itemExt,
+          iconPath = iconpath  -- FileView extracted icon path
         }
 
-        -- Determine item type
-        if item.ext == "lnk" then
+        -- Process based on extension
+        if itemExt == "lnk" then
+          -- .lnk shortcut file
           item.type = "shortcut"
-        elseif item.ext == "" then
+          item.target = ParseLnkFile(filepath)
+          -- Copy to DesktopShortcuts
+          local destPath = skinPath .. "Data\\DesktopShortcuts\\" .. filename
+          os.execute('copy /Y "' .. filepath .. '" "' .. destPath .. '" >nul 2>&1')
+          item.localCopy = destPath
+
+        elseif itemExt == "url" then
+          -- .url internet shortcut
+          item.type = "url"
+          local url, iconFile = ParseUrlFile(filepath)
+          item.target = url
+          item.urlIconFile = iconFile
+          -- Copy to DesktopShortcuts
+          local destPath = skinPath .. "Data\\DesktopShortcuts\\" .. filename
+          os.execute('copy /Y "' .. filepath .. '" "' .. destPath .. '" >nul 2>&1')
+          item.localCopy = destPath
+          -- Copy icon if found
+          if iconFile and iconFile ~= "" then
+            local iconDest = skinPath .. "Data\\DesktopIcons\\" .. itemName .. ".ico"
+            os.execute('copy /Y "' .. iconFile .. '" "' .. iconDest .. '" >nul 2>&1')
+          end
+
+        elseif itemExt == "exe" then
+          -- Executable file - create shortcut for it
+          item.type = "executable"
+          item.target = filepath
+          -- TODO: Create .lnk for .exe (requires COM/VBS or external tool)
+          -- For now, just reference the .exe directly
+
+        elseif itemExt == "" then
+          -- Folder
           item.type = "folder"
+          item.target = filepath
+
         else
+          -- Regular file
           item.type = "file"
+          item.target = filepath
         end
 
         table.insert(items, item)
@@ -146,6 +196,95 @@ function ReadDesktopDirectly(desktopPath)
   end)
 
   return items
+end
+
+-- ========================================
+-- PARSE .LNK FILE: Extract target from binary
+-- ========================================
+function ParseLnkFile(lnkPath)
+  local file = io.open(lnkPath, "rb")
+  if not file then
+    print("Scanner: ERROR - Cannot open .lnk file: " .. lnkPath)
+    return nil
+  end
+
+  local content = file:read("*a")
+  file:close()
+
+  -- Look for paths in binary data (ASCII strings)
+  -- Paths contain ":\" (C:\...) or "\\" (network paths)
+  for path in content:gmatch("([A-Za-z]:[^\0]+)") do
+    -- Clean up: remove null bytes and trailing garbage
+    path = path:match("([^\0]+)")
+    if path and (path:match("%.exe") or path:match("%.lnk") or path:match("%.") or path:match("\\[^\\]+$")) then
+      -- Found a likely target path
+      print("Scanner: .lnk target found: " .. path)
+      return path
+    end
+  end
+
+  print("Scanner: WARNING - Could not extract target from .lnk: " .. lnkPath)
+  return nil
+end
+
+-- ========================================
+-- PARSE .URL FILE: Extract URL and IconFile
+-- ========================================
+function ParseUrlFile(urlPath)
+  local file = io.open(urlPath, "r")
+  if not file then
+    print("Scanner: ERROR - Cannot open .url file: " .. urlPath)
+    return nil, nil
+  end
+
+  local url = nil
+  local iconFile = nil
+
+  for line in file:lines() do
+    if not url then
+      local match = line:match("URL=(.+)")
+      if match then
+        url = match:gsub("%s+$", "") -- Trim trailing whitespace
+      end
+    end
+
+    if not iconFile then
+      local match = line:match("IconFile=(.+)")
+      if match then
+        iconFile = match:gsub("%s+$", "")
+      end
+    end
+
+    -- Stop if we found both
+    if url and iconFile then
+      break
+    end
+  end
+
+  file:close()
+
+  if url then
+    print("Scanner: .url target found: " .. url)
+  end
+  if iconFile then
+    print("Scanner: .url icon location: " .. iconFile)
+  end
+
+  return url, iconFile
+end
+
+-- ========================================
+-- ENSURE DIRECTORIES EXIST
+-- ========================================
+function EnsureDirectoriesExist(skinPath)
+  local iconsPath = skinPath .. "Data\\DesktopIcons"
+  local shortcutsPath = skinPath .. "Data\\DesktopShortcuts"
+
+  -- Create directories using os.execute with mkdir
+  os.execute('mkdir "' .. iconsPath .. '" 2>nul')
+  os.execute('mkdir "' .. shortcutsPath .. '" 2>nul')
+
+  print("Scanner: Ensured directories exist: DesktopIcons, DesktopShortcuts")
 end
 
 -- ========================================
