@@ -37,6 +37,10 @@ TextMeta=120,120,125,180
 AccentColor=180,180,190,255
 AccentHighlight=200,200,210,255
 
+; Primary Action Colors (for Quick Setup, Generate Drawers)
+PrimaryAccentColor=60,180,120,220
+PrimaryAccentHighlight=80,200,140,255
+
 ; Interactive States
 HighlightBg=40,40,45,200
 HoverBg=35,35,40,180
@@ -96,16 +100,23 @@ AutoSaveInterval=5000
 
 ; === DATA PATHS ===
 ; These are relative to skin root
-DataPath=#@#..\Data\
-CatDataPath=#@#..\CatData\
-DrawersPath=#@#..\Drawers\
-BackupsPath=#@#..\Backups\
-LogsPath=#@#..\Logs\
-CustomisationPath=#@#..\CatData\Customisation\
+DataPath=#CURRENTPATH#Data\
+CatDataPath=#CURRENTPATH#CatData\
+DrawersPath=#CURRENTPATH#Drawers\
+BackupsPath=#CURRENTPATH#Backups\
+LogsPath=#CURRENTPATH#Logs\
+CustomisationPath=#CURRENTPATH#CatData\Customisation\
 
 ; === PAGINATION ===
 ItemsPerPage=50
-MaxCategoriesVisible=10
+MaxCategoriesVisible=15
+CurrentItemPage=1
+
+; === SELECTION STATE ===
+SelectedCategoryIndex=0
+SelectedCategory=
+SelectedItemIndex=0
+SelectedItem=
 
 ; === VERSION ===
 SchemaVersion=1.0.0

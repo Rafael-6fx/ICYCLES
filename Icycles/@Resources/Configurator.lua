@@ -183,8 +183,8 @@ function ReorderCategory(categoryName, direction)
   pendingChanges = true
   lastSaveTime = os.time()
 
-  SKIN:Bang("!UpdateMeasure", "ScriptMeasure")
-  SKIN:Bang("!UpdateMeter", "*")
+  -- Update only the category list meter
+  SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
   SKIN:Bang("!Redraw")
 
   return true
@@ -211,7 +211,7 @@ function AddItemToCategory(itemName, categoryName)
 
   -- Load item data from ListedDesktopItems
   local skinPath = SKIN:GetVariable("CURRENTPATH")
-  local itemsPath = skinPath .. "Data\\ListedDesktopItems.lua"
+  local itemsPath = skinPath .. "Data\\ListedDesktopItems.ldb"
   local allItems = LoadDataFile(itemsPath)
 
   if not allItems then
@@ -528,8 +528,445 @@ function CountItemsInCategory(categoryName)
 end
 
 -- ========================================
+-- UI HELPER FUNCTIONS
+-- ========================================
+
+function GetDesktopItemsDisplay()
+  print("Configurator: GetDesktopItemsDisplay() called")
+
+  -- Load scanned Desktop items
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.ldb"
+
+  print("Configurator: Looking for items at: " .. itemsFilePath)
+
+  -- Try to load the file
+  local success, itemsData = pcall(dofile, itemsFilePath)
+  if not success then
+    print("Configurator: ERROR loading items file: " .. tostring(itemsData))
+    return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
+  end
+
+  print("Configurator: File loaded successfully, type = " .. type(itemsData))
+  if itemsData then
+    print("Configurator: itemsData.items type = " .. type(itemsData.items))
+    print("Configurator: itemsData.version = " .. tostring(itemsData.version))
+    print("Configurator: itemsData.itemCount = " .. tostring(itemsData.itemCount))
+    if itemsData.items then
+      print("Configurator: itemsData.items length = " .. #itemsData.items)
+    end
+  end
+
+  if not itemsData or not itemsData.items or #itemsData.items == 0 then
+    if not itemsData then
+      print("Configurator: itemsData is nil")
+    elseif not itemsData.items then
+      print("Configurator: itemsData.items is nil")
+    else
+      print("Configurator: itemsData.items is EMPTY ARRAY (length = 0)")
+      print("Configurator: This means Scanner returned no items - check UserDesktopData.ldb")
+    end
+    print("Configurator: Items file loaded but no items table found")
+    return "No Desktop items scanned yet\nClick REBUILD LIST to scan Desktop"
+  end
+
+  print("Configurator: Loaded " .. #itemsData.items .. " Desktop items")
+
+  -- Get pagination settings
+  local itemsPerPage = tonumber(SKIN:GetVariable("ItemsPerPage")) or 50
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+  local totalItems = #itemsData.items
+  local totalPages = math.ceil(totalItems / itemsPerPage)
+
+  -- Ensure current page is valid
+  if currentPage < 1 then currentPage = 1 end
+  if currentPage > totalPages then currentPage = totalPages end
+
+  -- Calculate start and end indices for current page
+  local startIndex = ((currentPage - 1) * itemsPerPage) + 1
+  local endIndex = math.min(currentPage * itemsPerPage, totalItems)
+
+  print("Configurator: Showing page " .. currentPage .. "/" .. totalPages .. " (items " .. startIndex .. "-" .. endIndex .. ")")
+
+  -- Get currently selected item index
+  local selectedItemIndex = tonumber(SKIN:GetVariable("SelectedItemIndex")) or 0
+
+  -- Format items for display
+  local result = ""
+  for i = startIndex, endIndex do
+    local item = itemsData.items[i]
+    local displayName = item.customName or item.name
+    -- Limit length to fit in column
+    if #displayName > 30 then
+      displayName = displayName:sub(1, 27) .. "..."
+    end
+
+    -- Add visual indicator for selected item
+    if i == selectedItemIndex then
+      result = result .. "▸ " .. displayName
+    else
+      result = result .. "  " .. displayName
+    end
+
+    if i < endIndex then
+      result = result .. "\n"
+    end
+  end
+
+  -- Add pagination info at bottom if there are multiple pages
+  if totalPages > 1 then
+    result = result .. "\n\n--- Page " .. currentPage .. " of " .. totalPages .. " ---"
+  end
+
+  print("Configurator: Returning " .. #result .. " characters of item list (selected: " .. selectedItemIndex .. ")")
+  return result
+end
+
+function GetCategoryListString()
+  local categories = GetCategoriesSorted()
+  print("Configurator: GetCategoryListString called, found " .. #categories .. " categories")
+
+  if #categories == 0 then
+    return "No categories yet\nClick QUICK SETUP to create defaults"
+  end
+
+  -- Get currently selected category index
+  local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+
+  local result = ""
+  for i, categoryName in ipairs(categories) do
+    local itemCount = CountItemsInCategory(categoryName)
+
+    -- Add visual indicator for selected category
+    if i == selectedIndex then
+      result = result .. "▸ " .. categoryName .. " (" .. itemCount .. " items)"
+    else
+      result = result .. "  " .. categoryName .. " (" .. itemCount .. " items)"
+    end
+
+    if i < #categories then
+      result = result .. "\n"
+    end
+  end
+
+  print("Configurator: Returning category list with selection at index " .. selectedIndex)
+  return result
+end
+
+function HandleDesktopItemClick(mouseY)
+  -- Desktop items list starts at Y=170 in Column A (MeterItemContainerText)
+  local itemListY = 170
+
+  -- Get ACTUAL line height from Rainmeter (font-independent!)
+  local fontSize = tonumber(SKIN:GetVariable("ItemSize")) or 10
+  local lineHeight = GetActualLineHeight(fontSize)
+
+  -- Calculate relative Y and which item was clicked on the CURRENT PAGE (1-indexed)
+  local relativeY = mouseY - itemListY
+  local clickedPageIndex = math.floor(relativeY / lineHeight) + 1
+
+  print("Configurator: Desktop item clicked at mouseY=" .. tostring(mouseY) .. ", itemListY=" .. tostring(itemListY) .. ", relativeY=" .. tostring(relativeY) .. ", page index=" .. clickedPageIndex)
+
+  -- Validate click is within list area
+  if clickedPageIndex < 1 then
+    print("Configurator: ERROR - Click was above item list, ignoring")
+    return
+  end
+
+  -- Load Desktop items to get the clicked item name
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.ldb"
+
+  local success, itemsData = pcall(dofile, itemsFilePath)
+  if not success or not itemsData or not itemsData.items or #itemsData.items == 0 then
+    print("Configurator: ERROR - Cannot load Desktop items for click detection")
+    return
+  end
+
+  -- Get pagination settings to calculate actual item index
+  local itemsPerPage = tonumber(SKIN:GetVariable("ItemsPerPage")) or 50
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+  local totalItems = #itemsData.items
+
+  -- Calculate actual index in full item list
+  local actualIndex = ((currentPage - 1) * itemsPerPage) + clickedPageIndex
+
+  -- Validate actual index is within range
+  if actualIndex < 1 or actualIndex > totalItems then
+    print("Configurator: Clicked index " .. actualIndex .. " out of range (1-" .. totalItems .. ")")
+    return
+  end
+
+  local clickedItem = itemsData.items[actualIndex]
+  local itemName = clickedItem.customName or clickedItem.name
+
+  print("Configurator: Selected Desktop item #" .. actualIndex .. " (page " .. currentPage .. ", position " .. clickedPageIndex .. "): " .. itemName)
+
+  -- Set the SelectedItem variable so it can be added to categories
+  SKIN:Bang("!SetVariable", "SelectedItem", itemName)
+  SKIN:Bang("!SetVariable", "SelectedItemIndex", tostring(actualIndex))
+
+  -- Force measure update to pick up new variable, then update meter
+  SKIN:Bang("!UpdateMeasure", "ScriptConfigurator")
+  SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
+  SKIN:Bang("!Redraw")
+end
+
+function HandleCategoryClick(mouseY)
+  -- MeterCategoryListText is at Y=190
+  local categoryListY = 190
+
+  -- Get ACTUAL line height from Rainmeter's rendering
+  -- This is font-independent and adapts to font changes!
+  local fontSize = tonumber(SKIN:GetVariable("ItemSize")) or 10
+  local lineHeight = GetActualLineHeight(fontSize)
+
+  -- Calculate relative Y position within the meter
+  local relativeY = mouseY - categoryListY
+
+  -- Calculate which category was clicked (1-indexed)
+  local clickedIndex = math.floor(relativeY / lineHeight) + 1
+
+  print("Configurator: Category clicked at mouseY=" .. tostring(mouseY) .. ", categoryListY=" .. tostring(categoryListY) .. ", relativeY=" .. tostring(relativeY) .. ", calculated index=" .. clickedIndex)
+
+  -- Validate index is positive and select
+  if clickedIndex >= 1 then
+    SelectCategory(clickedIndex)
+  else
+    print("Configurator: ERROR - Negative index " .. clickedIndex .. ", click was above list")
+  end
+end
+
+function GetCategoryByIndex(index)
+  local categories = GetCategoriesSorted()
+  if index >= 1 and index <= #categories then
+    return categories[index]
+  end
+  return ""
+end
+
+function GetCategoryIndex(categoryName)
+  local categories = GetCategoriesSorted()
+  for i, name in ipairs(categories) do
+    if name == categoryName then
+      return i
+    end
+  end
+  return 0
+end
+
+-- Category slot functions for UI (max 15 slots)
+function GetCategorySlotName(slot)
+  local categories = GetCategoriesSorted()
+  if slot >= 1 and slot <= #categories then
+    return categories[slot]
+  end
+  return ""
+end
+
+function GetCategorySlotDisplay(slot)
+  local categoryName = GetCategorySlotName(slot)
+  if categoryName == "" then
+    return ""
+  end
+  local itemCount = CountItemsInCategory(categoryName)
+  return categoryName .. " (" .. itemCount .. " items)"
+end
+
+function IsCategorySlotVisible(slot)
+  local categories = GetCategoriesSorted()
+  if slot >= 1 and slot <= #categories then
+    return 0  -- 0 = visible (Hidden=0)
+  else
+    return 1  -- 1 = hidden (Hidden=1)
+  end
+end
+
+function GetCategorySlotBgColor(slot)
+  local selectedIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+  if slot == selectedIndex then
+    return "60,180,120,120"  -- Selected: bright teal
+  else
+    return "0,0,0,0"  -- Not selected: transparent
+  end
+end
+
+function SelectCategory(index)
+  local categories = GetCategoriesSorted()
+  if index >= 1 and index <= #categories then
+    SKIN:Bang("!SetVariable", "SelectedCategoryIndex", tostring(index))
+    SKIN:Bang("!SetVariable", "SelectedCategory", categories[index])
+    -- Force measure update to pick up new variables
+    SKIN:Bang("!UpdateMeasure", "ScriptConfigurator")
+    -- Update all affected meters
+    SKIN:Bang("!UpdateMeter", "MeterCategoryListText")
+    SKIN:Bang("!UpdateMeter", "MeterPreviewContainerText")
+    SKIN:Bang("!UpdateMeter", "MeterCurrentCategoryName")
+    SKIN:Bang("!Redraw")
+    print("Configurator: Selected category #" .. index .. ": " .. categories[index])
+  end
+end
+
+-- ========================================
+-- CATEGORY NAVIGATION
+-- ========================================
+
+function NextCategory()
+  local categories = GetCategoriesSorted()
+  local currentIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+
+  if #categories == 0 then
+    print("Configurator: No categories to navigate")
+    return
+  end
+
+  local nextIndex = currentIndex + 1
+  if nextIndex > #categories then
+    nextIndex = 1  -- Wrap around to first category
+  end
+
+  SelectCategory(nextIndex)
+end
+
+function PreviousCategory()
+  local categories = GetCategoriesSorted()
+  local currentIndex = tonumber(SKIN:GetVariable("SelectedCategoryIndex")) or 0
+
+  if #categories == 0 then
+    print("Configurator: No categories to navigate")
+    return
+  end
+
+  local prevIndex = currentIndex - 1
+  if prevIndex < 1 then
+    prevIndex = #categories  -- Wrap around to last category
+  end
+
+  SelectCategory(prevIndex)
+end
+
+-- ========================================
+-- PAGINATION FUNCTIONS
+-- ========================================
+
+function NextItemPage()
+  -- Load Desktop items to get total count
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local itemsFilePath = skinPath .. "Data\\ListedDesktopItems.ldb"
+
+  local success, itemsData = pcall(dofile, itemsFilePath)
+  if not success or not itemsData or not itemsData.items then
+    print("Configurator: Cannot navigate pages - no items loaded")
+    return
+  end
+
+  local itemsPerPage = tonumber(SKIN:GetVariable("ItemsPerPage")) or 50
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+  local totalItems = #itemsData.items
+  local totalPages = math.ceil(totalItems / itemsPerPage)
+
+  if currentPage < totalPages then
+    SKIN:Bang("!SetVariable", "CurrentItemPage", tostring(currentPage + 1))
+    SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
+    SKIN:Bang("!Redraw")
+    print("Configurator: Next page -> " .. (currentPage + 1) .. "/" .. totalPages)
+  else
+    print("Configurator: Already on last page (" .. totalPages .. ")")
+  end
+end
+
+function PreviousItemPage()
+  local currentPage = tonumber(SKIN:GetVariable("CurrentItemPage")) or 1
+
+  if currentPage > 1 then
+    SKIN:Bang("!SetVariable", "CurrentItemPage", tostring(currentPage - 1))
+    SKIN:Bang("!UpdateMeter", "MeterItemContainerText")
+    SKIN:Bang("!Redraw")
+    print("Configurator: Previous page -> " .. (currentPage - 1))
+  else
+    print("Configurator: Already on first page")
+  end
+end
+
+function GetSelectedCategoryItems()
+  print("Configurator: GetSelectedCategoryItems() called")
+
+  local selectedIndexStr = SKIN:GetVariable("SelectedCategoryIndex") or "0"
+  local selectedIndex = tonumber(selectedIndexStr) or 0
+
+  print("Configurator: SelectedCategoryIndex = " .. selectedIndex)
+
+  if selectedIndex == 0 then
+    return "No category selected\nClick a category to view items"
+  end
+
+  local categoryName = GetCategoryByIndex(selectedIndex)
+  print("Configurator: Category name at index " .. selectedIndex .. " = " .. (categoryName or "nil"))
+
+  if categoryName == "" then
+    return "No category selected"
+  end
+
+  local categoryData = LoadCategoryData(categoryName)
+  if not categoryData then
+    print("Configurator: ERROR - Could not load category data for: " .. categoryName)
+    return "Error loading category data"
+  end
+
+  if not categoryData.items or #categoryData.items == 0 then
+    print("Configurator: Category " .. categoryName .. " has no items")
+    return "No items in this category\nSelect items in Column A and click +"
+  end
+
+  print("Configurator: Found " .. #categoryData.items .. " items in " .. categoryName)
+
+  local result = ""
+  for i, item in ipairs(categoryData.items) do
+    local displayName = item.customName or item.name
+    result = result .. displayName
+    if i < #categoryData.items then
+      result = result .. "\n"
+    end
+  end
+
+  return result
+end
+
+-- ========================================
+-- LAYOUT HELPER FUNCTIONS
+-- ========================================
+
+function GetActualLineHeight(fontSize)
+  -- Delegate to LayoutHelper for font-independent metrics
+  local layoutHelper = SKIN:GetMeasure("ScriptLayoutHelper")
+  if layoutHelper then
+    return layoutHelper:GetActualLineHeight(fontSize)
+  else
+    -- Fallback if LayoutHelper not available
+    print("Configurator: WARNING - LayoutHelper not available, using fallback")
+    return math.ceil(fontSize * 1.5)
+  end
+end
+
+-- ========================================
 -- UTILITY FUNCTIONS
 -- ========================================
+
+function LoadCategoryData(categoryName)
+  local skinPath = SKIN:GetVariable("CURRENTPATH")
+  local catDataPath = skinPath .. "CatData\\" .. categoryName .. ".ldb"
+
+  print("Configurator: Loading category data from: " .. catDataPath)
+
+  local data = LoadDataFile(catDataPath)
+  if data then
+    print("Configurator: Successfully loaded category: " .. categoryName)
+    return data
+  else
+    print("Configurator: Failed to load category: " .. categoryName)
+    return nil
+  end
+end
 
 function LoadDataFile(path)
   local success, result = pcall(dofile, path)
