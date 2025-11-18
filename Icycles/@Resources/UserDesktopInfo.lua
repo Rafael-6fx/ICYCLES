@@ -35,8 +35,22 @@ function GatherDesktopInfo()
 
   -- Get Desktop path using environment variable
   -- Rainmeter has access to USERPROFILE env var
-  local userProfile = os.getenv("USERPROFILE") or "C:\\Users\\Default"
+  local userProfile = os.getenv("USERPROFILE")
+  print("UserDesktopInfo: DEBUG - os.getenv('USERPROFILE') = " .. tostring(userProfile))
+
+  if not userProfile or userProfile == "" then
+    -- Try getting from Rainmeter variable
+    userProfile = SKIN:GetVariable("USERPROFILE")
+    print("UserDesktopInfo: DEBUG - SKIN:GetVariable('USERPROFILE') = " .. tostring(userProfile))
+  end
+
+  if not userProfile or userProfile == "" then
+    userProfile = "C:\\Users\\Default"
+    print("UserDesktopInfo: WARNING - Could not get USERPROFILE, using default: " .. userProfile)
+  end
+
   data.desktopPath = userProfile .. "\\Desktop"
+  print("UserDesktopInfo: DEBUG - desktopPath = " .. tostring(data.desktopPath))
 
   -- Get Rainmeter version
   data.rainmeterVersion = SKIN:GetVariable("RAINMETERVERSION") or "Unknown"
