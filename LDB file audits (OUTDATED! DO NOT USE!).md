@@ -1,5 +1,5 @@
-# COMPLETE .LDB FILE WRITE/READ AUDIT
-
+# ~COMPLETE .LDB FILE WRITE/READ AUDIT~ OUTDATED!
+# the following information is currently only partially in use (File operations mainly)
 ## FILE WRITE OPERATIONS (All modules that create .ldb files)
 
 ### 1. UserDesktopInfo.lua
